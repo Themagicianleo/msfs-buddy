@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TopBar } from './components/TopBar';
 import { PAGE_TITLES, SideNav, type Page } from './components/SideNav';
 import { FlightPage } from './pages/FlightPage';
@@ -26,6 +26,14 @@ export default function App() {
   const settings = { ...DEFAULT_SETTINGS, ...stored };
   const [plan, setPlan] = useState<FlightPlan | null>(() => load<FlightPlan | null>('plan', null));
   const [state, setState] = useState<LoadState>({ status: 'idle' });
+  const [scrolled, setScrolled] = useState(false);
+  const content = useRef<HTMLDivElement>(null);
+
+  // Each page starts at the top, with the large title showing.
+  useEffect(() => {
+    content.current?.scrollTo(0, 0);
+    setScrolled(false);
+  }, [page]);
 
   const theme = useResolvedTheme(settings.appearance);
   useEffect(() => applyTheme(theme), [theme]);
@@ -62,8 +70,8 @@ export default function App() {
   return (
     <div className={`efb ${settings.reduceTransparency ? 'solid' : ''}`}>
       <SideNav page={page} onSelect={setPage} />
-      <div className="efb-content">
-        <TopBar title={PAGE_TITLES[page]} plan={plan} state={state} settings={settings} onRefresh={refresh} />
+      <div className="efb-content" ref={content} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 40)}>
+        <TopBar title={PAGE_TITLES[page]} scrolled={scrolled} plan={plan} state={state} settings={settings} onRefresh={refresh} />
         <main className="efb-main">
           {page === 'flight' && (
             <FlightPage {...common} state={state} onRefresh={refresh} onDemo={loadDemo} onGoto={setPage} />

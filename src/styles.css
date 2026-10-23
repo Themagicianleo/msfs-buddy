@@ -99,8 +99,8 @@ h1, h2, h3 { margin: 0; }
 
 /* ---------- Shell ---------- */
 .efb { display: flex; height: 100%; }
-.efb-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.efb-main { flex: 1; overflow-y: auto; padding: 4px 32px 40px; }
+.efb-content { position: relative; flex: 1; min-width: 0; overflow-y: auto; }
+.efb-main { padding: 0 32px 40px; }
 
 /* Sidebar: floating material panel, as on iPadOS. */
 .sidebar {
@@ -145,40 +145,65 @@ h1, h2, h3 { margin: 0; }
 
 .tabbar { display: none; }
 
-/* Navigation bar with large title */
+/* Navigation bar: transparent and pinned, with a large title that scrolls
+   away. When content scrolls underneath, a soft scroll-edge blur fades in. */
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 800;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 26px 32px 18px;
+  height: 72px;
+  padding: 0 22px 0 32px;
 }
-.navbar-title { min-width: 0; }
-.navbar-title h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.navbar::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 -28px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(var(--bg), color-mix(in srgb, var(--bg) 60%, transparent) 55%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  mask-image: linear-gradient(#000 50%, transparent);
+  -webkit-mask-image: linear-gradient(#000 50%, transparent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.navbar.scrolled::before { opacity: 1; }
+.navbar-inline-title { font-size: 17px; font-weight: 600; opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; }
+.navbar.scrolled .navbar-inline-title { opacity: 1; transform: none; }
+.navbar-trailing { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.large-title { padding: 0 32px 20px; margin-top: -10px; }
+.large-title h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .navbar-subtitle { margin-top: 4px; color: var(--label-2); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.navbar-trailing { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
-.clock { text-align: right; }
-.clock-utc { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
-.clock-caption { font-size: 12px; color: var(--label-2); }
 
-.circle-btn {
+/* Toolbar items grouped in one glass capsule */
+.toolbar-group { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 5px 0 18px; border-radius: 999px; }
+.clock { display: flex; align-items: baseline; gap: 8px; }
+.clock-utc { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.clock-caption { font-size: 12px; color: var(--label-2); }
+.toolbar-divider { width: 1px; height: 22px; background: var(--separator); }
+.toolbar-btn {
   display: grid;
   place-items: center;
   width: 36px;
   height: 36px;
   border: 0;
   border-radius: 50%;
-  background: var(--fill-2);
+  background: transparent;
   color: var(--blue);
   cursor: pointer;
 }
-.circle-btn:hover:not(:disabled) { background: var(--fill); }
-.circle-btn:disabled { opacity: 0.5; }
+.toolbar-btn:hover:not(:disabled) { background: var(--fill-3); }
+.toolbar-btn:disabled { opacity: 0.5; }
 .spin { display: inline-flex; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .page { display: flex; flex-direction: column; gap: 26px; max-width: 1280px; }
-.page-fill { height: 100%; }
+.page-fill { min-height: calc(100vh - 220px); }
 .page-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- Controls ---------- */
@@ -435,7 +460,7 @@ h1, h2, h3 { margin: 0; }
 .navlog .row-apt .fix b { color: var(--blue); }
 
 /* ---------- Map ---------- */
-.map-wrap { position: relative; flex: 1; min-height: 440px; border-radius: var(--radius); overflow: hidden; background: var(--card); }
+.map-wrap { position: relative; flex: 1; height: calc(100vh - 220px); min-height: 420px; border-radius: var(--radius); overflow: hidden; background: var(--card); }
 .map { position: absolute; inset: 0; background: var(--fill-3); }
 .map-legend {
   position: absolute;
@@ -465,8 +490,9 @@ h1, h2, h3 { margin: 0; }
   font-weight: 600;
 }
 .leaflet-tooltip.map-label::before { display: none; }
-.leaflet-bar { border: 0 !important; border-radius: 10px !important; overflow: hidden; box-shadow: var(--shadow-float) !important; }
-.leaflet-bar a { background: var(--material) !important; color: var(--label) !important; border-bottom-color: var(--separator) !important; backdrop-filter: blur(20px); }
+.leaflet-bar { border: 0 !important; border-radius: 22px !important; }
+.leaflet-bar a { width: 40px !important; height: 40px !important; line-height: 40px !important; background: transparent !important; color: var(--label) !important; border-bottom-color: var(--separator) !important; }
+.leaflet-bar a:first-child, .leaflet-bar a:last-child { border-radius: 0 !important; }
 .leaflet-control-attribution { background: var(--material) !important; color: var(--label-2) !important; }
 .leaflet-control-attribution a { color: var(--blue) !important; }
 .map-popup .leaflet-popup-content-wrapper, .map-popup .leaflet-popup-tip { background: var(--card-raised); color: var(--label); box-shadow: var(--shadow-float); }
@@ -595,7 +621,6 @@ h1, h2, h3 { margin: 0; }
 .list-row.active .list-label { color: var(--blue); font-weight: 600; }
 
 /* ---------- Reduce transparency ---------- */
-.efb.solid .sidebar, .efb.solid .tabbar, .efb.solid .map-legend { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--card); }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -648,11 +673,14 @@ h1, h2, h3 { margin: 0; }
     cursor: pointer;
   }
   .tab-item.active { color: var(--blue); background: var(--fill-3); }
-  .navbar { padding: calc(14px + env(safe-area-inset-top)) 16px 12px; align-items: center; }
-  .navbar-title h1 { font-size: 30px; }
+  .navbar { height: calc(58px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0 16px; }
+  .large-title { padding: 0 16px 14px; margin-top: -6px; }
+  .large-title h1 { font-size: 30px; }
   .navbar-subtitle { font-size: 13px; }
-  .clock-utc { font-size: 17px; }
+  .toolbar-group { height: 42px; padding-left: 14px; }
+  .clock-utc { font-size: 15px; }
   .clock-caption { display: none; }
+  .hero { min-height: 600px; padding: 10px; border-radius: 26px; }
   .navbar-trailing { gap: 10px; }
   .navbar-trailing .badge { display: none; }
   .efb-main { padding: 0 16px calc(100px + env(safe-area-inset-bottom)); }
@@ -675,3 +703,150 @@ h1, h2, h3 { margin: 0; }
   .log-remarks { grid-column: 1 / -1; }
   .welcome { margin: 4vh auto; padding: 28px 20px; }
 }
+
+/* ======================================================================
+   Liquid Glass
+   A clear, lensing material for the navigation and control layer: light
+   tint, modest blur, a bright refracting rim and soft depth. Content
+   cards stay solid; glass floats above them.
+   ====================================================================== */
+:root {
+  --glass-tint: rgba(255, 255, 255, 0.4);
+  --glass-tint-strong: rgba(255, 255, 255, 0.66);
+  --glass-lens: rgba(255, 255, 255, 0.72);
+  --glass-blur: 12px;
+  --glass-rim: rgba(255, 255, 255, 0.95);
+  --glass-rim-soft: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --glass-inner: inset 0 1px 1.5px rgba(255, 255, 255, 0.7), inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+}
+:root[data-theme='dark'] {
+  --glass-tint: rgba(58, 58, 62, 0.34);
+  --glass-tint-strong: rgba(28, 28, 30, 0.64);
+  --glass-lens: rgba(255, 255, 255, 0.14);
+  --glass-rim: rgba(255, 255, 255, 0.55);
+  --glass-rim-soft: rgba(255, 255, 255, 0.07);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --glass-inner: inset 0 1px 1px rgba(255, 255, 255, 0.2), inset 0 -1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.glass,
+.sidebar,
+.tabbar,
+.sheet,
+.btn,
+.map-legend,
+.leaflet-bar {
+  position: relative;
+  border: 0;
+  background: var(--glass-tint);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  box-shadow: var(--glass-shadow), var(--glass-inner);
+}
+
+/* Refracting rim: brightest where light would catch the top-left and
+   bottom-right edges. */
+.glass::after,
+.sidebar::after,
+.tabbar::after,
+.sheet::after,
+.btn::after,
+.map-legend::after,
+.leaflet-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(145deg, var(--glass-rim), var(--glass-rim-soft) 28%, transparent 50%, var(--glass-rim-soft) 75%, var(--glass-rim));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+.tabbar { position: fixed; }
+
+/* Buttons: .btn is the glass style, .btn-primary the tinted "prominent" glass. */
+.btn { color: var(--blue); transition: transform 0.2s cubic-bezier(0.3, 1.4, 0.5, 1), background-color 0.2s; }
+.btn:hover:not(:disabled) { background: var(--glass-tint-strong); }
+.btn:active:not(:disabled) { transform: scale(0.95); opacity: 1; }
+.btn-primary { background: color-mix(in srgb, var(--blue) 88%, transparent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--blue); filter: none; }
+.btn-primary:disabled { background: var(--glass-tint); }
+
+/* Selected items inside glass (tab bar, segmented control) sit on a lens. */
+.tab.active,
+.tab-item.active {
+  background: var(--glass-lens);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), var(--glass-inner);
+}
+.tab-item.active { color: var(--blue); }
+
+/* Sidebar: floating glass, as on iPadOS. */
+.sidebar { border-radius: 30px; }
+.sidebar-row.active { box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35); }
+
+/* Toggle: the thumb turns into a stretched glass lens while pressed. */
+.toggle input:active + .toggle-ui::after {
+  width: 36px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+.toggle input:checked:active + .toggle-ui::after { transform: translateX(11px); }
+
+/* Sheet floats inset from the screen edges with concentric corners. */
+.sheet-backdrop { background: rgba(0, 0, 0, 0.18); }
+.sheet {
+  width: auto;
+  flex: 1;
+  margin: 0 8px calc(8px + env(safe-area-inset-bottom));
+  padding: 8px 10px 14px;
+  border-radius: 36px;
+  background: var(--glass-tint-strong);
+}
+.sheet .list { background: transparent; }
+.sheet .list-row { border-radius: 14px; }
+
+/* Map controls */
+.map-legend { border-radius: 999px; }
+.leaflet-bar { overflow: hidden; }
+
+/* Flight: boarding pass in glass over the route map */
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 540px;
+  padding: 14px;
+  border-radius: 30px;
+  overflow: hidden;
+  background: var(--fill-3);
+  isolation: isolate;
+}
+.hero-map { position: absolute; inset: 0; }
+.hero .boarding {
+  z-index: 1000;
+  border-radius: 22px;
+  background: var(--glass-tint-strong);
+  --glass-blur: 22px;
+}
+
+/* Reduce transparency: solid surfaces, same shapes. */
+.efb.solid .glass,
+.efb.solid .sidebar,
+.efb.solid .tabbar,
+.efb.solid .sheet,
+.efb.solid .btn,
+.efb.solid .map-legend,
+.efb.solid .leaflet-bar {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--card);
+}
+.efb.solid .btn-primary { background: var(--blue); }
+.hero .leaflet-control-attribution { font-size: 9px; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 0 0 0 8px; }

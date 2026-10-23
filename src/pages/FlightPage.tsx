@@ -2,6 +2,7 @@ import type { LoadState } from '../App';
 import type { Page } from '../components/SideNav';
 import { CatBadge, Field, Panel } from '../components/ui';
 import { Icon } from '../components/Icon';
+import { RouteMap } from '../components/RouteMap';
 import { fmtAltitude, fmtDuration, fmtNum, fmtZulu } from '../lib/format';
 import { parseMetar } from '../lib/metar';
 import { simbriefDispatchUrl, type Airport, type FlightPlan } from '../lib/simbrief';
@@ -30,9 +31,10 @@ function hoursMinutes(sec: number | null) {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
-export function FlightPage({ plan, settings, state, onRefresh, onDemo, onGoto }: {
+export function FlightPage({ plan, settings, theme, state, onRefresh, onDemo, onGoto }: {
   plan: FlightPlan | null;
   settings: Settings;
+  theme: 'light' | 'dark';
   state: LoadState;
   onRefresh: () => void;
   onDemo: () => void;
@@ -66,10 +68,14 @@ export function FlightPage({ plan, settings, state, onRefresh, onDemo, onGoto }:
   const u = plan.units.toUpperCase();
   const altn = plan.alternates[0];
   const transAlt = plan.origin.transAlt ?? 18000;
+  const narrow = window.matchMedia('(max-width: 760px)').matches;
 
   return (
     <div className="page">
-      <div className="card boarding">
+      {/* Route map behind a floating glass boarding pass, like a place card in Maps. */}
+      <div className="hero">
+        <RouteMap plan={plan} theme={theme} interactive={false} padding={narrow ? [30, 40, 430, 40] : [40, 60, 300, 60]} className="hero-map" />
+      <div className="glass boarding">
         <div className="boarding-top">
           <span className="boarding-flight">{plan.callsign || plan.flightNumber}</span>
           <span className="muted">{[plan.aircraft.name || plan.aircraft.icao, plan.aircraft.reg].filter(Boolean).join(' · ')}</span>
@@ -92,6 +98,7 @@ export function FlightPage({ plan, settings, state, onRefresh, onDemo, onGoto }:
           <Field label="Block" value={fmtDuration(t.block)} />
           <Field label="Alternate" value={altn?.icao || '—'} />
         </div>
+      </div>
       </div>
 
       <div className="grid grid-3">

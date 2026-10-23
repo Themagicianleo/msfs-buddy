@@ -8,9 +8,14 @@ function pad(n: number) {
   return String(n).padStart(2, '0');
 }
 
-/** Navigation bar above each page: large title, flight, clocks and refresh. */
-export function TopBar({ title, plan, state, settings, onRefresh }: {
+/**
+ * iOS-style navigation bar: a transparent bar pinned to the top with glass
+ * controls, and a large title that scrolls away. Once scrolled, the title
+ * reappears inline and the bar gains a soft scroll-edge blur.
+ */
+export function TopBar({ title, scrolled, plan, state, settings, onRefresh }: {
   title: string;
+  scrolled: boolean;
   plan: FlightPlan | null;
   state: LoadState;
   settings: Settings;
@@ -26,8 +31,24 @@ export function TopBar({ title, plan, state, settings, onRefresh }: {
   const local = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !settings.clock24 });
 
   return (
-    <header className="navbar">
-      <div className="navbar-title">
+    <>
+      <header className={`navbar ${scrolled ? 'scrolled' : ''}`}>
+        <div className="navbar-inline-title">{title}</div>
+        <div className="navbar-trailing">
+          {state.status === 'error' && <span className="badge badge-red" title={state.message}>SimBrief error</span>}
+          <div className="glass toolbar-group">
+            <div className="clock">
+              <span className="clock-utc">{utc}</span>
+              <span className="clock-caption">UTC{settings.showLocalTime && ` · ${local}`}</span>
+            </div>
+            <span className="toolbar-divider" />
+            <button className="toolbar-btn" onClick={onRefresh} title="Fetch latest SimBrief OFP" disabled={state.status === 'loading'}>
+              <span className={state.status === 'loading' ? 'spin' : ''}><Icon name="refresh" size={19} /></span>
+            </button>
+          </div>
+        </div>
+      </header>
+      <div className="large-title">
         <h1>{title}</h1>
         {plan && (
           <div className="navbar-subtitle">
@@ -35,16 +56,6 @@ export function TopBar({ title, plan, state, settings, onRefresh }: {
           </div>
         )}
       </div>
-      <div className="navbar-trailing">
-        {state.status === 'error' && <span className="badge badge-red" title={state.message}>SimBrief error</span>}
-        <div className="clock">
-          <div className="clock-utc">{utc}</div>
-          <div className="clock-caption">UTC{settings.showLocalTime && ` · Local ${local}`}</div>
-        </div>
-        <button className="circle-btn" onClick={onRefresh} title="Fetch latest SimBrief OFP" disabled={state.status === 'loading'}>
-          <span className={state.status === 'loading' ? 'spin' : ''}><Icon name="refresh" size={19} /></span>
-        </button>
-      </div>
-    </header>
+    </>
   );
 }
