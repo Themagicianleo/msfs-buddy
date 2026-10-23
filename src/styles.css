@@ -702,3 +702,57 @@ body:has(.efb.solid)::before { animation: none; }
 }
 .tiles-dimmed { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.4); }
 .personal-link { margin-top: 6px; word-break: break-all; }
+
+/* ---------- Logbook ---------- */
+.alert-info { background: rgba(90, 200, 250, 0.1); border-color: rgba(90, 200, 250, 0.3); color: #bfeaff; cursor: pointer; }
+.grid-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.grid-stats .panel-body { padding: 14px 18px; }
+.oooi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.oooi-cell {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--glass-inset);
+  border: 1px solid var(--edge-soft);
+}
+.oooi-cell.done { border-color: rgba(48, 209, 88, 0.4); }
+.oooi-cell.done .oooi-label b { color: var(--green); }
+.oooi-label { grid-column: 1 / -1; font-size: 12px; letter-spacing: 0.5px; }
+.oooi-time {
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 22px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 0;
+}
+.oooi-cell .small { grid-column: 1 / -1; }
+.log-form { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.log-form .to-field input, .log-form select { font-size: 15px; padding: 8px 14px; }
+.log-form select {
+  background: var(--glass-inset);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 12px;
+}
+.log-remarks { grid-column: span 4; }
+.logbook td.remarks { max-width: 220px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.logbook .row-actions { display: flex; gap: 6px; }
+
+@media (max-width: 1100px) {
+  .grid-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .log-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .log-remarks { grid-column: span 2; }
+}
+@media (max-width: 760px) {
+  .grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .oooi, .log-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .log-remarks { grid-column: 1 / -1; }
+}

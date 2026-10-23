@@ -1,6 +1,6 @@
 import { Icon } from './Icon';
 
-export type Page = 'flight' | 'ofp' | 'map' | 'weather' | 'charts' | 'perf' | 'loadsheet' | 'notes' | 'settings';
+export type Page = 'flight' | 'ofp' | 'map' | 'weather' | 'charts' | 'perf' | 'loadsheet' | 'notes' | 'logbook' | 'settings';
 
 const ITEMS: { id: Page; label: string }[] = [
   { id: 'flight', label: 'Flight' },
@@ -11,6 +11,7 @@ const ITEMS: { id: Page; label: string }[] = [
   { id: 'perf', label: 'Perf' },
   { id: 'loadsheet', label: 'Loadsheet' },
   { id: 'notes', label: 'Notes' },
+  { id: 'logbook', label: 'Logbook' },
 ];
 
 export function SideNav({ page, onSelect }: { page: Page; onSelect: (p: Page) => void }) {

@@ -9,6 +9,7 @@ import { ChartsPage } from './pages/ChartsPage';
 import { PerfPage } from './pages/PerfPage';
 import { LoadsheetPage } from './pages/LoadsheetPage';
 import { NotesPage } from './pages/NotesPage';
+import { LogbookPage } from './pages/LogbookPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { fetchLatestOfp, normalise, type FlightPlan } from './lib/simbrief';
 import { DEFAULT_SETTINGS, load, save, usePersistent, type Settings } from './lib/storage';
@@ -70,6 +71,7 @@ export default function App() {
           {page === 'perf' && <PerfPage {...common} />}
           {page === 'loadsheet' && <LoadsheetPage {...common} />}
           {page === 'notes' && <NotesPage {...common} />}
+          {page === 'logbook' && <LogbookPage {...common} />}
           {page === 'settings' && (
             <SettingsPage settings={settings} onChange={setSettings} onRefresh={refresh} onDemo={loadDemo} state={state} />
           )}

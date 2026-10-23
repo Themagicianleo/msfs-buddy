@@ -17,6 +17,7 @@ subscription needed.
 | **Perf** | SimBrief takeoff/landing performance (V-speeds, FLEX, flaps) when you enable it in SimBrief, plus a takeoff card you fill in |
 | **Loadsheet** | ZFW/TOW/LW against the limits, the fuel plan breakdown, pax and cargo |
 | **Notes** | ATC clearance fields and a scratchpad. Saved in your browser |
+| **Logbook** | Log each flight from your SimBrief plan, tap **Now** to stamp OUT/OFF/ON/IN times, and add landing rate, fuel used, network and remarks. Shows totals (flights, hours, distance, average landing rate). Export to CSV, plus back up and restore |
 
 ## Running it
 
