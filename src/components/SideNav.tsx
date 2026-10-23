@@ -37,7 +37,10 @@ export function SideNav({ page, onSelect }: { page: Page; onSelect: (p: Page) =>
   return (
     <>
       <nav className="sidebar" aria-label="Pages">
-        <div className="sidebar-title">EFB</div>
+        <div className="sidebar-title">
+          <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={30} height={30} />
+          EFB
+        </div>
         {SECTIONS.map((s) => (
           <div key={s.title} className="sidebar-section">
             <div className="sidebar-heading">{s.title}</div>

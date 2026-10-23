@@ -118,7 +118,8 @@ h1, h2, h3 { margin: 0; }
   box-shadow: var(--shadow-float);
   overflow-y: auto;
 }
-.sidebar-title { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; padding: 0 10px 10px; }
+.sidebar-title { display: flex; align-items: center; gap: 10px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; padding: 0 10px 10px; }
+.sidebar-title img { border-radius: 7px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 .sidebar-section { margin-top: 14px; }
 .sidebar-heading { font-size: 13px; font-weight: 600; color: var(--label-2); padding: 0 10px 4px; }
 .sidebar-spacer { flex: 1; min-height: 16px; }
