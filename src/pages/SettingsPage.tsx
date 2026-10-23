@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { LoadState } from '../App';
-import { Panel } from '../components/ui';
-import type { Settings } from '../lib/storage';
+import { CopyButton, Panel } from '../components/ui';
+import { personalLink, syncUserInUrl, type Settings } from '../lib/storage';
 
 export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
   settings: Settings;
@@ -16,6 +16,7 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
   const saveUser = (e: React.FormEvent) => {
     e.preventDefault();
     onChange({ ...settings, simbriefUser: user.trim() });
+    syncUserInUrl(user.trim());
   };
 
   const toggle = (k: 'autoRefreshWx' | 'clock24' | 'showLocalTime' | 'reduceTransparency') => (
@@ -38,6 +39,19 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
             <button className="btn btn-primary" type="submit" disabled={!dirty}>Save</button>
           </div>
         </form>
+        {settings.simbriefUser && (
+          <div className="setting-row">
+            <div>
+              <div>Your personal link</div>
+              <div className="muted small">
+                Bookmark this link, or open it in Safari and choose Share → Add to Home Screen. It always opens the EFB
+                with your SimBrief ID, even if the browser has cleared its saved data.
+              </div>
+              <div className="mono small accent personal-link">{personalLink(settings.simbriefUser)}</div>
+            </div>
+            <CopyButton text={personalLink(settings.simbriefUser)} label="Copy link" />
+          </div>
+        )}
         <div className="setting-row">
           <div>
             <div>Fetch latest OFP</div>

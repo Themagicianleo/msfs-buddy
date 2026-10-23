@@ -46,6 +46,12 @@ network).
 5. If the EFB runs on the same PC as the sim and feels sluggish, turn on
    **Reduce transparency** in Settings to switch off the glass blur.
 
+**Keeping your SimBrief ID:** it's saved in your browser, but some browsers
+(especially in-app browsers and iOS Safari after a week unused) clear that.
+Settings shows a personal link like `.../msfs-buddy/?user=123456`. Bookmark it,
+or open it in Safari and use **Share → Add to Home Screen**, and the EFB always
+opens with your ID set.
+
 You can press **Try a demo flight** to look around without a SimBrief account.
 
 ### Hosting it online (optional)
