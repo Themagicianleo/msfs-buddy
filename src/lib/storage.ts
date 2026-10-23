@@ -32,6 +32,7 @@ export interface Settings {
   autoRefreshWx: boolean;
   clock24: boolean;
   showLocalTime: boolean;
+  reduceTransparency: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -40,4 +41,5 @@ export const DEFAULT_SETTINGS: Settings = {
   autoRefreshWx: true,
   clock24: true,
   showLocalTime: true,
+  reduceTransparency: false,
 };

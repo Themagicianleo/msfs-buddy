@@ -1,7 +1,7 @@
 # MSFS Buddy — a mini EFB for Microsoft Flight Simulator
 
-A browser-based electronic flight bag, styled after airliner tablet EFBs (like the
-Fenix A320's), that pulls your latest flight plan from **SimBrief** and shows live
+A browser-based electronic flight bag, laid out like airliner tablet EFBs (such as
+the Fenix A320's) with a translucent "Liquid Glass" look, that pulls your latest flight plan from **SimBrief** and shows live
 **METAR/TAF** for your airports, with **ChartFox** chart links. No Navigraph
 subscription needed.
 
@@ -43,6 +43,8 @@ network).
 3. To get V-speeds on the Perf page, turn on *Takeoff / Landing Performance* in
    SimBrief's dispatch options.
 4. Charts open on chartfox.org, where you sign in with a free ChartFox account.
+5. If the EFB runs on the same PC as the sim and feels sluggish, turn on
+   **Reduce transparency** in Settings to switch off the glass blur.
 
 You can press **Try a demo flight** to look around without a SimBrief account.
 

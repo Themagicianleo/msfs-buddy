@@ -18,7 +18,7 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
     onChange({ ...settings, simbriefUser: user.trim() });
   };
 
-  const toggle = (k: 'autoRefreshWx' | 'clock24' | 'showLocalTime') => (
+  const toggle = (k: 'autoRefreshWx' | 'clock24' | 'showLocalTime' | 'reduceTransparency') => (
     <label className="toggle">
       <input type="checkbox" checked={settings[k]} onChange={(e) => onChange({ ...settings, [k]: e.target.checked })} />
       <span className="toggle-ui" />
@@ -57,6 +57,13 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
         <div className="setting-row"><div>Auto-refresh weather every 5 minutes</div>{toggle('autoRefreshWx')}</div>
         <div className="setting-row"><div>24-hour local clock</div>{toggle('clock24')}</div>
         <div className="setting-row"><div>Show local time in top bar</div>{toggle('showLocalTime')}</div>
+        <div className="setting-row">
+          <div>
+            <div>Reduce transparency</div>
+            <div className="muted small">Turns off the glass blur. Use this if the EFB runs on the same PC as the sim and feels slow.</div>
+          </div>
+          {toggle('reduceTransparency')}
+        </div>
       </Panel>
 
       <Panel title="Advanced">

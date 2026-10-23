@@ -19,7 +19,9 @@ export type LoadState = { status: 'idle' | 'loading' | 'ok' | 'error'; message?:
 
 export default function App() {
   const [page, setPage] = usePersistent<Page>('page', 'flight');
-  const [settings, setSettings] = usePersistent<Settings>('settings', DEFAULT_SETTINGS);
+  const [stored, setSettings] = usePersistent<Settings>('settings', DEFAULT_SETTINGS);
+  // Settings saved by older versions may lack newer keys.
+  const settings = { ...DEFAULT_SETTINGS, ...stored };
   const [plan, setPlan] = useState<FlightPlan | null>(() => load<FlightPlan | null>('plan', null));
   const [state, setState] = useState<LoadState>({ status: 'idle' });
 
@@ -53,7 +55,7 @@ export default function App() {
   const common = { plan, settings };
 
   return (
-    <div className="efb">
+    <div className={`efb ${settings.reduceTransparency ? 'solid' : ''}`}>
       <TopBar plan={plan} state={state} settings={settings} onRefresh={refresh} />
       <div className="efb-body">
         <SideNav page={page} onSelect={setPage} />
