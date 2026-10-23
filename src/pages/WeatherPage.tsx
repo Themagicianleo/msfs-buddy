@@ -75,10 +75,9 @@ export function WeatherPage({ plan, settings }: { plan: FlightPlan | null; setti
   return (
     <div className="page">
       <div className="page-toolbar">
-        <h2>Weather</h2>
         <form className="search" onSubmit={addStation}>
           <Icon name="search" size={18} />
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Add ICAO (e.g. KJFK)" maxLength={4} />
+          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Add airport" maxLength={4} />
           <button className="btn btn-small" type="submit">Add</button>
         </form>
         <span className="muted small push-right">
@@ -119,14 +118,14 @@ function StationCard({ station, metar, taf, onRemove }: { station: Station; meta
   const spreadLow = m && m.temp !== null && m.dewpoint !== null && m.temp - m.dewpoint <= 2;
 
   return (
-    <section className="panel wx-card">
+    <section className="card wx-card">
       <div className="wx-head">
         {station.role && <span className={`role role-${station.role.toLowerCase()}`}>{station.role}</span>}
         <span className="wx-icao">{station.icao}</span>
         <span className="muted wx-name">{station.name}</span>
         {m && <CatBadge cat={m.category} />}
         {m?.time && <span className="muted small">{ago(m.time)}</span>}
-        {fromOfp && <span className="pill">from OFP</span>}
+        {fromOfp && <span className="badge">From OFP</span>}
         <span className="push-right" />
         <a className="btn btn-small" href={`https://chartfox.org/${station.icao}`} target="_blank" rel="noreferrer">Charts</a>
         {onRemove && <button className="btn btn-small" onClick={onRemove}>Remove</button>}

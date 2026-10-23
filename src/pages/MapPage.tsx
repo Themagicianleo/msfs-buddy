@@ -7,16 +7,19 @@ import type { Settings } from '../lib/storage';
 
 const esc = (v: string) => v.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+const ROUTE = '#0a84ff';
+const ALTN = '#ff9f0a';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
 
 // Esri's dark grey canvas needs no API key. If its tiles keep failing, switch
-// to standard OpenStreetMap tiles, darkened with a CSS filter (.tiles-dimmed).
-function addBasemap(map: L.Map) {
-  const base = L.tileLayer(`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, {
+// to standard OpenStreetMap tiles (darkened with a CSS filter in dark mode).
+function addBasemap(map: L.Map, theme: 'light' | 'dark') {
+  const canvas = theme === 'dark' ? 'World_Dark_Gray' : 'World_Light_Gray';
+  const base = L.tileLayer(`${ESRI}/${canvas}_Base/MapServer/tile/{z}/{y}/{x}`, {
     attribution: 'Tiles &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
     maxZoom: 16,
   }).addTo(map);
-  const labels = L.tileLayer(`${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 16 }).addTo(map);
+  const labels = L.tileLayer(`${ESRI}/${canvas}_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 16 }).addTo(map);
 
   let errors = 0;
   base.on('tileerror', () => {
@@ -26,18 +29,18 @@ function addBasemap(map: L.Map) {
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 18,
-      className: 'tiles-dimmed',
+      className: theme === 'dark' ? 'tiles-dimmed' : '',
     }).addTo(map);
   });
 }
 
-export function MapPage({ plan }: { plan: FlightPlan | null; settings: Settings }) {
+export function MapPage({ plan, theme = 'dark' }: { plan: FlightPlan | null; settings: Settings; theme?: 'light' | 'dark' }) {
   const el = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!plan || !el.current) return;
     const map = L.map(el.current, { zoomControl: true, attributionControl: true, worldCopyJump: true });
-    addBasemap(map);
+    addBasemap(map, theme);
 
     const pts = plan.navlog.filter((f) => f.lat !== null && f.lon !== null);
     const latlngs = pts.map((f) => L.latLng(f.lat!, f.lon!));
@@ -50,16 +53,17 @@ export function MapPage({ plan }: { plan: FlightPlan | null; settings: Settings 
       while (latlngs[i].lng - latlngs[i - 1].lng < -180) latlngs[i] = L.latLng(latlngs[i].lat, latlngs[i].lng + 360);
     }
 
-    L.polyline(latlngs, { color: '#e040fb', weight: 3 }).addTo(map);
+    // Route styled like Apple Maps directions: a solid blue line with white stops.
+    L.polyline(latlngs, { color: ROUTE, weight: 4, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }).addTo(map);
 
     pts.forEach((f, i) => {
       const isApt = f.type === 'apt' || i === 0 || i === pts.length - 1;
       const marker = L.circleMarker(latlngs[i], {
-        radius: isApt ? 6 : 3.5,
-        color: isApt ? '#39b7ea' : '#fff',
-        fillColor: isApt ? '#39b7ea' : '#16191d',
+        radius: isApt ? 7 : 3.5,
+        color: isApt ? '#ffffff' : ROUTE,
+        fillColor: isApt ? ROUTE : '#ffffff',
         fillOpacity: 1,
-        weight: 2,
+        weight: isApt ? 3 : 2,
       }).addTo(map);
       const alt = f.altitude ? (f.altitude >= 10000 ? 'FL' + Math.round(f.altitude / 100) : f.altitude + ' ft') : '';
       marker.bindTooltip(`<b>${esc(f.ident)}</b>`, {
@@ -74,11 +78,11 @@ export function MapPage({ plan }: { plan: FlightPlan | null; settings: Settings 
     plan.alternates.forEach((a) => {
       if (a.lat === null || a.lon === null) return;
       const ll = L.latLng(a.lat, a.lon);
-      L.circleMarker(ll, { radius: 5, color: '#f0b429', fillColor: '#f0b429', fillOpacity: 1 })
+      L.circleMarker(ll, { radius: 6, color: '#ffffff', fillColor: ALTN, fillOpacity: 1, weight: 3 })
         .addTo(map)
         .bindTooltip(`<b>${esc(a.icao)}</b> ALTN`, { permanent: true, direction: 'right', className: 'map-label', offset: [6, 0] });
       const last = latlngs[latlngs.length - 1];
-      if (last) L.polyline([last, ll], { color: '#f0b429', weight: 2, dashArray: '6 6' }).addTo(map);
+      if (last) L.polyline([last, ll], { color: ALTN, weight: 3, dashArray: '2 7', lineCap: 'round' }).addTo(map);
     });
 
     if (latlngs.length) map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
@@ -87,7 +91,7 @@ export function MapPage({ plan }: { plan: FlightPlan | null; settings: Settings 
     return () => {
       map.remove();
     };
-  }, [plan]);
+  }, [plan, theme]);
 
   if (!plan) return <NoPlan what="the map" />;
 
@@ -96,8 +100,8 @@ export function MapPage({ plan }: { plan: FlightPlan | null; settings: Settings 
       <div className="map-wrap">
         <div ref={el} className="map" />
         <div className="map-legend">
-          <span><i style={{ background: '#e040fb' }} /> Route</span>
-          <span><i style={{ background: '#f0b429' }} /> Alternate</span>
+          <span><i style={{ background: ROUTE }} /> Route</span>
+          <span><i style={{ background: ALTN }} /> Alternate</span>
         </div>
       </div>
       {plan.mapImages.length > 0 && (

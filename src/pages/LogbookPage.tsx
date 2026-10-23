@@ -75,7 +75,6 @@ export function LogbookPage({ plan }: { plan: FlightPlan | null; settings: Setti
   return (
     <div className="page">
       <div className="page-toolbar">
-        <h2>Logbook</h2>
         {!draft && (
           <>
             {plan && (

@@ -63,7 +63,10 @@ export interface Settings {
   clock24: boolean;
   showLocalTime: boolean;
   reduceTransparency: boolean;
+  appearance: Appearance;
 }
+
+export type Appearance = 'system' | 'light' | 'dark';
 
 export const DEFAULT_SETTINGS: Settings = {
   simbriefUser: '',
@@ -72,4 +75,5 @@ export const DEFAULT_SETTINGS: Settings = {
   clock24: true,
   showLocalTime: true,
   reduceTransparency: false,
+  appearance: 'system',
 };

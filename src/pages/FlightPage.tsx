@@ -1,27 +1,33 @@
 import type { LoadState } from '../App';
 import type { Page } from '../components/SideNav';
 import { CatBadge, Field, Panel } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { fmtAltitude, fmtDuration, fmtNum, fmtZulu } from '../lib/format';
 import { parseMetar } from '../lib/metar';
 import { simbriefDispatchUrl, type Airport, type FlightPlan } from '../lib/simbrief';
 import type { Settings } from '../lib/storage';
 
-function AirportBlock({ label, a, time, timeLabel }: { label: string; a: Airport; time: number | null; timeLabel: string }) {
+function AirportBlock({ a, time, timeLabel, end }: { a: Airport; time: number | null; timeLabel: string; end?: boolean }) {
   const m = a.metar ? parseMetar(a.metar) : null;
   return (
-    <div className="apt-block">
-      <div className="apt-label">{label}</div>
+    <div className={`apt-block ${end ? 'end' : ''}`}>
       <div className="apt-icao">{a.icao}</div>
       <div className="apt-name">{a.name}</div>
       <div className="apt-meta">
-        <span>RWY <b>{a.runway || '—'}</b></span>
+        <span>Runway {a.runway || '—'}</span>
         {m && <CatBadge cat={m.category} />}
       </div>
       <div className="apt-time">
-        <span className="muted">{timeLabel}</span> <b>{fmtZulu(time)}</b>
+        <span className="muted">{timeLabel}</span> {fmtZulu(time)}
       </div>
     </div>
   );
+}
+
+function hoursMinutes(sec: number | null) {
+  if (sec === null) return '—';
+  const m = Math.round(sec / 60);
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
 export function FlightPage({ plan, settings, state, onRefresh, onDemo, onGoto }: {
@@ -63,24 +69,29 @@ export function FlightPage({ plan, settings, state, onRefresh, onDemo, onGoto }:
 
   return (
     <div className="page">
-      <div className="flight-header">
-        <AirportBlock label="DEPARTURE" a={plan.origin} time={t.schedOut} timeLabel="STD" />
-        <div className="flight-mid">
-          <div className="flight-callsign">{plan.callsign || plan.flightNumber}</div>
-          <div className="flight-line">
-            <span className="dot" />
-            <span className="line" />
-            <svg viewBox="0 0 24 24" width="26" height="26" className="plane"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" /></svg>
-            <span className="line" />
-            <span className="dot" />
-          </div>
-          <div className="flight-stats">
-            <span>{fmtDuration(t.ete)} ETE</span>
-            <span>{fmtNum(plan.routeDistance)} NM</span>
-            <span>{fmtAltitude(plan.cruiseAlt, transAlt)}</span>
-          </div>
+      <div className="card boarding">
+        <div className="boarding-top">
+          <span className="boarding-flight">{plan.callsign || plan.flightNumber}</span>
+          <span className="muted">{[plan.aircraft.name || plan.aircraft.icao, plan.aircraft.reg].filter(Boolean).join(' · ')}</span>
         </div>
-        <AirportBlock label="ARRIVAL" a={plan.destination} time={t.schedIn} timeLabel="STA" />
+        <div className="boarding-route">
+          <AirportBlock a={plan.origin} time={t.schedOut} timeLabel="Departs" />
+          <div className="boarding-mid">
+            <div className="boarding-line">
+              <span />
+              <span className="boarding-plane"><Icon name="flight" size={22} /></span>
+              <span />
+            </div>
+            <div className="boarding-duration">{hoursMinutes(t.ete)}</div>
+          </div>
+          <AirportBlock a={plan.destination} time={t.schedIn} timeLabel="Arrives" end />
+        </div>
+        <div className="boarding-meta">
+          <Field label="Distance" value={fmtNum(plan.routeDistance)} unit="nm" />
+          <Field label="Cruise" value={fmtAltitude(plan.cruiseAlt, transAlt)} />
+          <Field label="Block" value={fmtDuration(t.block)} />
+          <Field label="Alternate" value={altn?.icao || '—'} />
+        </div>
       </div>
 
       <div className="grid grid-3">

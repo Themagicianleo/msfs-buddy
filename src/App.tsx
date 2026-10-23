@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TopBar } from './components/TopBar';
-import { SideNav, type Page } from './components/SideNav';
+import { PAGE_TITLES, SideNav, type Page } from './components/SideNav';
 import { FlightPage } from './pages/FlightPage';
 import { OfpPage } from './pages/OfpPage';
 import { MapPage } from './pages/MapPage';
@@ -15,6 +15,7 @@ import { fetchLatestOfp, normalise, type FlightPlan } from './lib/simbrief';
 import { DEFAULT_SETTINGS, load, save, usePersistent, type Settings } from './lib/storage';
 import { setCorsProxy } from './lib/http';
 import { buildDemoOfp } from './sample/demoOfp';
+import { applyTheme, useResolvedTheme } from './lib/theme';
 
 export type LoadState = { status: 'idle' | 'loading' | 'ok' | 'error'; message?: string; at?: Date };
 
@@ -25,6 +26,9 @@ export default function App() {
   const settings = { ...DEFAULT_SETTINGS, ...stored };
   const [plan, setPlan] = useState<FlightPlan | null>(() => load<FlightPlan | null>('plan', null));
   const [state, setState] = useState<LoadState>({ status: 'idle' });
+
+  const theme = useResolvedTheme(settings.appearance);
+  useEffect(() => applyTheme(theme), [theme]);
 
   setCorsProxy(settings.corsProxy);
 
@@ -53,13 +57,13 @@ export default function App() {
     if (settings.simbriefUser) void refresh();
   }, [refresh, settings.simbriefUser]);
 
-  const common = { plan, settings };
+  const common = { plan, settings, theme };
 
   return (
     <div className={`efb ${settings.reduceTransparency ? 'solid' : ''}`}>
-      <TopBar plan={plan} state={state} settings={settings} onRefresh={refresh} />
-      <div className="efb-body">
-        <SideNav page={page} onSelect={setPage} />
+      <SideNav page={page} onSelect={setPage} />
+      <div className="efb-content">
+        <TopBar title={PAGE_TITLES[page]} plan={plan} state={state} settings={settings} onRefresh={refresh} />
         <main className="efb-main">
           {page === 'flight' && (
             <FlightPage {...common} state={state} onRefresh={refresh} onDemo={loadDemo} onGoto={setPage} />

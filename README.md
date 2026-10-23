@@ -1,7 +1,7 @@
 # MSFS Buddy — a mini EFB for Microsoft Flight Simulator
 
 A browser-based electronic flight bag, laid out like airliner tablet EFBs (such as
-the Fenix A320's) with a translucent "Liquid Glass" look, that pulls your latest flight plan from **SimBrief** and shows live
+the Fenix A320's) and styled like a native iPad app, with light and dark mode, that pulls your latest flight plan from **SimBrief** and shows live
 **METAR/TAF** for your airports, with **ChartFox** chart links. No Navigraph
 subscription needed.
 

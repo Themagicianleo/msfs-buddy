@@ -8,7 +8,9 @@ function pad(n: number) {
   return String(n).padStart(2, '0');
 }
 
-export function TopBar({ plan, state, settings, onRefresh }: {
+/** Navigation bar above each page: large title, flight, clocks and refresh. */
+export function TopBar({ title, plan, state, settings, onRefresh }: {
+  title: string;
   plan: FlightPlan | null;
   state: LoadState;
   settings: Settings;
@@ -24,31 +26,23 @@ export function TopBar({ plan, state, settings, onRefresh }: {
   const local = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !settings.clock24 });
 
   return (
-    <header className="topbar">
-      <div className="topbar-left">
-        <span className="brand">EFB</span>
-        {plan ? (
-          <span className="topbar-flight">
-            <b>{plan.callsign || plan.flightNumber}</b>
-            <span className="muted">
-              {plan.origin.icao} → {plan.destination.icao}
-            </span>
-            <span className="muted">{plan.aircraft.icao} {plan.aircraft.reg}</span>
-          </span>
-        ) : (
-          <span className="muted">No flight loaded</span>
+    <header className="navbar">
+      <div className="navbar-title">
+        <h1>{title}</h1>
+        {plan && (
+          <div className="navbar-subtitle">
+            {plan.callsign || plan.flightNumber} · {plan.origin.icao} – {plan.destination.icao} · {plan.aircraft.icao}
+          </div>
         )}
       </div>
-      <div className="topbar-clock">
-        <span className="clock-utc">{utc}<small>Z</small></span>
-        {settings.showLocalTime && <span className="clock-local">LCL {local}</span>}
-      </div>
-      <div className="topbar-right">
-        {state.status === 'error' && <span className="pill pill-red" title={state.message}>SimBrief error</span>}
-        {state.status === 'loading' && <span className="pill">Loading…</span>}
-        {plan?.airac && <span className="pill">AIRAC {plan.airac}</span>}
-        <button className="icon-btn" onClick={onRefresh} title="Fetch latest SimBrief OFP" disabled={state.status === 'loading'}>
-          <span className={state.status === 'loading' ? 'spin' : ''}><Icon name="refresh" size={20} /></span>
+      <div className="navbar-trailing">
+        {state.status === 'error' && <span className="badge badge-red" title={state.message}>SimBrief error</span>}
+        <div className="clock">
+          <div className="clock-utc">{utc}</div>
+          <div className="clock-caption">UTC{settings.showLocalTime && ` · Local ${local}`}</div>
+        </div>
+        <button className="circle-btn" onClick={onRefresh} title="Fetch latest SimBrief OFP" disabled={state.status === 'loading'}>
+          <span className={state.status === 'loading' ? 'spin' : ''}><Icon name="refresh" size={19} /></span>
         </button>
       </div>
     </header>

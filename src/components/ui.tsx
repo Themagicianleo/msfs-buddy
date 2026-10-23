@@ -3,14 +3,16 @@ import type { FlightCategory } from '../lib/metar';
 
 export function Panel({ title, right, children, className = '' }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`panel ${className}`}>
+    <section className={`section ${className}`}>
       {(title || right) && (
-        <div className="panel-head">
+        <div className="section-head">
           <h3>{title}</h3>
           {right}
         </div>
       )}
-      <div className="panel-body">{children}</div>
+      <div className="card">
+        <div className="card-body">{children}</div>
+      </div>
     </section>
   );
 }
@@ -47,7 +49,7 @@ export function NoPlan({ what = 'this page' }: { what?: string }) {
   return (
     <div className="empty">
       <p>Load a SimBrief flight plan to use {what}.</p>
-      <p className="muted">Set your SimBrief username in Settings, then press refresh in the top bar.</p>
+      <p className="muted">Set your SimBrief username in Settings, then tap the refresh button.</p>
     </div>
   );
 }

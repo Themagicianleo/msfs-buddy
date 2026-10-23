@@ -70,8 +70,7 @@ export function ChartsPage({ plan }: { plan: FlightPlan | null; settings: Settin
   return (
     <div className="page">
       <div className="page-toolbar">
-        <h2>Charts</h2>
-        <span className="pill">ChartFox</span>
+        <span className="muted">Charts by ChartFox</span>
         <form className="search push-right" onSubmit={search}>
           <Icon name="search" size={18} />
           <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Any airport ICAO" maxLength={4} />
@@ -83,7 +82,7 @@ export function ChartsPage({ plan }: { plan: FlightPlan | null; settings: Settin
 
       <div className="grid grid-3">
         {airports.map((a) => (
-          <section key={a.role + a.icao} className="panel chart-card">
+          <section key={a.role + a.icao} className="card chart-card">
             <div className="chart-head">
               <span className={`role role-${a.role.toLowerCase()}`}>{a.role}</span>
               <span className="wx-icao">{a.icao}</span>

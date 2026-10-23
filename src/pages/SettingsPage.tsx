@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { LoadState } from '../App';
-import { CopyButton, Panel } from '../components/ui';
-import { personalLink, syncUserInUrl, type Settings } from '../lib/storage';
+import { CopyButton, Panel, Tabs } from '../components/ui';
+import { personalLink, syncUserInUrl, type Appearance, type Settings } from '../lib/storage';
 
 export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
   settings: Settings;
@@ -68,6 +68,18 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
       </Panel>
 
       <Panel title="Display & weather">
+        <div className="setting-row">
+          <div>Appearance</div>
+          <Tabs<Appearance>
+            value={settings.appearance}
+            onChange={(appearance) => onChange({ ...settings, appearance })}
+            tabs={[
+              { id: 'system', label: 'Automatic' },
+              { id: 'light', label: 'Light' },
+              { id: 'dark', label: 'Dark' },
+            ]}
+          />
+        </div>
         <div className="setting-row"><div>Auto-refresh weather every 5 minutes</div>{toggle('autoRefreshWx')}</div>
         <div className="setting-row"><div>24-hour local clock</div>{toggle('clock24')}</div>
         <div className="setting-row"><div>Show local time in top bar</div>{toggle('showLocalTime')}</div>
