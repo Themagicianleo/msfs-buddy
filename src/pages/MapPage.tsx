@@ -7,17 +7,37 @@ import type { Settings } from '../lib/storage';
 
 const esc = (v: string) => v.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+
+// Esri's dark grey canvas needs no API key. If its tiles keep failing, switch
+// to standard OpenStreetMap tiles, darkened with a CSS filter (.tiles-dimmed).
+function addBasemap(map: L.Map) {
+  const base = L.tileLayer(`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, {
+    attribution: 'Tiles &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+    maxZoom: 16,
+  }).addTo(map);
+  const labels = L.tileLayer(`${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 16 }).addTo(map);
+
+  let errors = 0;
+  base.on('tileerror', () => {
+    if (++errors !== 6) return;
+    map.removeLayer(base);
+    map.removeLayer(labels);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+      className: 'tiles-dimmed',
+    }).addTo(map);
+  });
+}
+
 export function MapPage({ plan }: { plan: FlightPlan | null; settings: Settings }) {
   const el = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!plan || !el.current) return;
     const map = L.map(el.current, { zoomControl: true, attributionControl: true, worldCopyJump: true });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 18,
-    }).addTo(map);
+    addBasemap(map);
 
     const pts = plan.navlog.filter((f) => f.lat !== null && f.lon !== null);
     const latlngs = pts.map((f) => L.latLng(f.lat!, f.lon!));

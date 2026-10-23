@@ -62,7 +62,7 @@ back to the METAR/TAF stored in your OFP.
 - Flight plans: [SimBrief](https://www.simbrief.com) (latest OFP via the public fetcher API)
 - Weather: [aviationweather.gov](https://aviationweather.gov/data/api/), with [VATSIM METAR](https://metar.vatsim.net) as a fallback
 - Charts: [ChartFox](https://chartfox.org)
-- Map: © OpenStreetMap contributors, © CARTO
+- Map: Esri dark grey canvas, with © OpenStreetMap contributors as a fallback
 
 For flight simulation use only. Not for real-world navigation.
 

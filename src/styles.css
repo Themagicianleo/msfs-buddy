@@ -700,3 +700,4 @@ body:has(.efb.solid)::before { animation: none; }
   .rwy-input { margin-left: 0; }
   .welcome { margin: 4vh auto; padding: 28px 20px; }
 }
+.tiles-dimmed { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.4); }

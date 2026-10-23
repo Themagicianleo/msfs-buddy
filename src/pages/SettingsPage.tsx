@@ -87,7 +87,7 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
 
       <p className="muted small note">
         For flight simulation use only. Data: SimBrief (flight plans), aviationweather.gov / VATSIM (METAR/TAF), ChartFox (charts),
-        © OpenStreetMap / CARTO (map).
+        Esri / © OpenStreetMap (map).
       </p>
     </div>
   );
