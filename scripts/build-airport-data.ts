@@ -7,7 +7,7 @@
 //   (--from reads airports.csv, runways.csv and navaids.csv from a folder)
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { buildDataset, mergeNavaids, OPENAIP_EXPORT, OURAIRPORTS_URLS, parseOpenAipNavaids, type AirportDataset, type NavaidRow } from '../src/simplanner/lib/airports';
+import { buildDataset, mergeNavaids, OPENAIP_API, OURAIRPORTS_URLS, parseOpenAipNavaids, type AirportDataset, type NavaidRow } from '../src/simplanner/lib/airports';
 
 const OUT_DIR = 'public/data';
 const OUT = `${OUT_DIR}/ourairports.json`;
@@ -25,52 +25,40 @@ const [airports, runways, navaids] = await Promise.all([get('airports'), get('ru
 const date = new Date().toISOString().slice(0, 10);
 const ds = buildDataset(airports, runways, `OurAirports, downloaded ${date}`, navaids);
 
-// openAIP adds beacons OurAirports lacks (notably in China). Optional: any
-// failure just leaves the OurAirports beacons. Licensed CC BY-NC 4.0.
-async function openAipNavaids(countries: string[]): Promise<NavaidRow[]> {
+// openAIP adds beacons OurAirports lacks (coverage varies by country).
+// Optional: needs a free openAIP API key in the OPENAIP_API_KEY repository
+// secret; without it, or on any error, only OurAirports beacons are used.
+// openAIP data is licensed CC BY-NC 4.0.
+async function openAipNavaids(apiKey: string): Promise<NavaidRow[]> {
   const rows: NavaidRow[] = [];
-  const stats: string[] = [];
-  const statuses = new Map<string, number>();
-  let failures = 0;
-  // Diagnostic: what the export bucket actually contains (names change over time).
-  try {
-    const bucket = OPENAIP_EXPORT.split('/').pop();
-    const list = await fetch(`https://storage.googleapis.com/storage/v1/b/${bucket}/o?prefix=cn&maxResults=20`);
-    const body = list.ok ? ((await list.json()) as { items?: { name: string }[] }) : null;
-    console.log(`openAIP bucket listing: HTTP ${list.status}${body ? ': ' + (body.items ?? []).map((i) => i.name).join(', ') : ''}`);
-  } catch (e) {
-    console.log(`openAIP bucket listing failed: ${(e as Error).message}`);
+  for (let page = 1; page <= 200; page++) {
+    const res = await fetch(`${OPENAIP_API}/navaids?page=${page}&limit=1000`, {
+      headers: { 'x-openaip-api-key': apiKey, Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`openAIP API page ${page}: HTTP ${res.status}`);
+    const body = (await res.json()) as { items?: unknown[]; totalPages?: number; totalCount?: number };
+    const items = body.items ?? [];
+    rows.push(...parseOpenAipNavaids(items));
+    if (!items.length || (body.totalPages && page >= body.totalPages)) break;
   }
-  const queue = [...countries];
-  const worker = async () => {
-    for (let cc = queue.shift(); cc; cc = queue.shift()) {
-      try {
-        const res = await fetch(`${OPENAIP_EXPORT}/${cc.toLowerCase()}_nav.json`);
-        if (!res.ok) {
-          failures++;
-          statuses.set(String(res.status), (statuses.get(String(res.status)) ?? 0) + 1);
-          continue;
-        }
-        const got = parseOpenAipNavaids(await res.json(), cc);
-        rows.push(...got);
-        if (got.length) stats.push(`${cc}:${got.length}`);
-      } catch {
-        failures++;
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: 8 }, worker));
-  console.log(`openAIP: ${rows.length} beacons from ${stats.length} countries (${failures} countries unavailable; HTTP ${[...statuses].map(([k, v]) => `${k}×${v}`).join(', ') || '-'}). ${stats.sort().join(' ')}`);
+  const byCountry = new Map<string, number>();
+  rows.forEach((r) => byCountry.set(r[6] ?? '', (byCountry.get(r[6] ?? '') ?? 0) + 1));
+  console.log(`openAIP: ${rows.length} beacons (China: ${byCountry.get('CN') ?? 0}).`);
   return rows;
 }
 
-if (!fromDir && !process.argv.includes('--no-openaip')) {
-  const countries = [...new Set(ds.airports.map((a) => a[5]).filter((c): c is string => !!c && c.length === 2))];
-  const extra = await openAipNavaids(countries);
-  const { merged, added } = mergeNavaids(ds.navaids ?? [], extra);
-  ds.navaids = merged;
-  console.log(`openAIP: added ${added} beacons not already in OurAirports.`);
-  if (added) ds.source += ' + openAIP navaids (CC BY-NC 4.0)';
+const openAipKey = process.env.OPENAIP_API_KEY ?? '';
+if (!fromDir && openAipKey) {
+  try {
+    const { merged, added } = mergeNavaids(ds.navaids ?? [], await openAipNavaids(openAipKey));
+    ds.navaids = merged;
+    console.log(`openAIP: added ${added} beacons not already in OurAirports.`);
+    if (added) ds.source += ' + openAIP navaids (CC BY-NC 4.0)';
+  } catch (e) {
+    console.log(`openAIP skipped: ${(e as Error).message}`);
+  }
+} else if (!fromDir) {
+  console.log('openAIP skipped: no OPENAIP_API_KEY secret set (optional; see simplanner/README.md).');
 }
 
 // Refuse to publish an obviously broken download.

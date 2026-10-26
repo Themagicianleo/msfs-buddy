@@ -263,7 +263,7 @@ export class AirportIndex {
 const OPENAIP_TYPES: Record<number, string> = { 1: 'TACAN', 2: 'NDB', 3: 'VOR', 4: 'VOR-DME', 5: 'VORTAC', 6: 'VOR', 7: 'VOR-DME', 8: 'VORTAC' };
 
 /**
- * Read an openAIP navaid export (their JSON array, or GeoJSON). Returns
+ * Read openAIP navaids (the API's `items` array, or GeoJSON). Returns
  * NavaidRows; unknown shapes or types are skipped. openAIP data is licensed
  * CC BY-NC 4.0 (https://www.openaip.net).
  */
@@ -303,8 +303,8 @@ export function mergeNavaids(base: NavaidRow[], extra: NavaidRow[]): { merged: N
   return { merged, added };
 }
 
-/** Public openAIP export bucket (daily per-country files). */
-export const OPENAIP_EXPORT = 'https://storage.googleapis.com/29f98e10-a489-4c82-ae5e-489dbcd4912f';
+/** openAIP REST API (needs a free API key from openaip.net). */
+export const OPENAIP_API = 'https://api.core.openaip.net/api';
 
 /** Where the GitHub Action downloads from (see scripts/build-airport-data.ts). */
 export const OURAIRPORTS_URLS = {

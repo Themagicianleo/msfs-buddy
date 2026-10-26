@@ -59,6 +59,15 @@ TACAN and NDB beacons:
 * on a **domestic** flight it only uses beacons in that country, so a
   flight inside China never routes via beacons in India or Myanmar.
 
+**Optional, more beacons from openAIP:** create a free account at
+https://www.openaip.net, make an API key (your profile → API clients), and add
+it to this GitHub repository as a secret named `OPENAIP_API_KEY`
+(*Settings → Secrets and variables → Actions → New repository secret*). Then
+run **Update airport data**. The Action log shows how many beacons openAIP
+added (including for China). openAIP data is CC BY-NC 4.0 (free,
+non-commercial use with credit), which fits this free personal site. Without
+the key only OurAirports is used.
+
 Coverage is the limit: the open data has few Chinese beacons in the west
 (around ZUDC/ZUNZ there are none), so those routes come out **Direct**. For
 a beacon route there, add the real fixes under *Waypoints* (from your charts)

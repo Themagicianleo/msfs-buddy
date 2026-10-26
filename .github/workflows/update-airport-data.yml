@@ -22,6 +22,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx vite-node scripts/build-airport-data.ts
+        env:
+          # Optional: a free openAIP API key adds more VOR/NDB beacons.
+          OPENAIP_API_KEY: ${{ secrets.OPENAIP_API_KEY }}
       - name: Commit if changed
         id: commit
         run: |
