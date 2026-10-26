@@ -7,7 +7,7 @@
 //   (--from reads airports.csv, runways.csv and navaids.csv from a folder)
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { buildDataset, OURAIRPORTS_URLS, type AirportDataset } from '../src/simplanner/lib/airports';
+import { buildDataset, mergeNavaids, OPENAIP_EXPORT, OURAIRPORTS_URLS, parseOpenAipNavaids, type AirportDataset, type NavaidRow } from '../src/simplanner/lib/airports';
 
 const OUT_DIR = 'public/data';
 const OUT = `${OUT_DIR}/ourairports.json`;
@@ -24,6 +24,43 @@ async function get(name: keyof typeof OURAIRPORTS_URLS): Promise<string> {
 const [airports, runways, navaids] = await Promise.all([get('airports'), get('runways'), get('navaids')]);
 const date = new Date().toISOString().slice(0, 10);
 const ds = buildDataset(airports, runways, `OurAirports, downloaded ${date}`, navaids);
+
+// openAIP adds beacons OurAirports lacks (notably in China). Optional: any
+// failure just leaves the OurAirports beacons. Licensed CC BY-NC 4.0.
+async function openAipNavaids(countries: string[]): Promise<NavaidRow[]> {
+  const rows: NavaidRow[] = [];
+  const stats: string[] = [];
+  let failures = 0;
+  const queue = [...countries];
+  const worker = async () => {
+    for (let cc = queue.shift(); cc; cc = queue.shift()) {
+      try {
+        const res = await fetch(`${OPENAIP_EXPORT}/${cc.toLowerCase()}_nav.json`);
+        if (!res.ok) {
+          failures++;
+          continue;
+        }
+        const got = parseOpenAipNavaids(await res.json(), cc);
+        rows.push(...got);
+        if (got.length) stats.push(`${cc}:${got.length}`);
+      } catch {
+        failures++;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: 8 }, worker));
+  console.log(`openAIP: ${rows.length} beacons from ${stats.length} countries (${failures} countries unavailable). ${stats.sort().join(' ')}`);
+  return rows;
+}
+
+if (!fromDir && !process.argv.includes('--no-openaip')) {
+  const countries = [...new Set(ds.airports.map((a) => a[5]).filter((c): c is string => !!c && c.length === 2))];
+  const extra = await openAipNavaids(countries);
+  const { merged, added } = mergeNavaids(ds.navaids ?? [], extra);
+  ds.navaids = merged;
+  console.log(`openAIP: added ${added} beacons not already in OurAirports.`);
+  if (added) ds.source += ' + openAIP navaids (CC BY-NC 4.0)';
+}
 
 // Refuse to publish an obviously broken download.
 if (!fromDir && (ds.airports.length < 5000 || (ds.navaids?.length ?? 0) < 1000)) {
@@ -45,7 +82,7 @@ const json = JSON.stringify(ds);
 writeFileSync(OUT, json);
 writeFileSync(
   `${OUT_DIR}/SOURCE.md`,
-  `# Airport data\n\n\`ourairports.json\` is generated from the OurAirports data set\n(https://ourairports.com/data/), which is released into the public domain.\nIt is not navigation data: no airways, procedures or AIRAC cycle.\n\nLast update: ${date}. Rebuilt by \`scripts/build-airport-data.ts\`.\n`,
+  `# Airport data\n\n\`ourairports.json\` is generated from the OurAirports data set\n(https://ourairports.com/data/), which is released into the public domain.\nIt is not navigation data: no airways, procedures or AIRAC cycle.\n\nWhen available, VOR/NDB beacons from openAIP (https://www.openaip.net) are\nmerged in. openAIP data is licensed CC BY-NC 4.0 (non-commercial use, with\nattribution).\n\nLast update: ${date}. Rebuilt by \`scripts/build-airport-data.ts\`.\n`,
 );
 console.log(
   `Wrote ${OUT}: ${ds.airports.length} airports, ${Object.keys(ds.runways).length} with runways, ${ds.navaids?.length ?? 0} navaids, ${(json.length / 1e6).toFixed(1)} MB.`,

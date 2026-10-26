@@ -21,6 +21,9 @@ export interface FlightInputs extends PlanInputs {
   autoCruise: boolean;
   autoAlternate: boolean;
   autoRunways: boolean;
+  /** Random (like SimBrief) or entered by hand. */
+  loadMode: 'random' | 'manual';
+  loadNote?: string;
   /** Set by Generate flight: how the runways were chosen. */
   runwayNotes?: string;
   routeNote?: string;

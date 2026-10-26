@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AirportIndex, buildDataset, type Airport, type Navaid } from './airports';
+import { AirportIndex, buildDataset, mergeNavaids, parseOpenAipNavaids, type Airport, type Navaid, type NavaidRow } from './airports';
 import { generateRoute, pickRunway, suggestAlternates, suggestCruiseFl, trackPosition } from './autoplan';
 
-const nav = (ident: string, lat: number, lon: number, type = 'VOR-DME', usage = 'HI'): Navaid => ({ ident, name: ident, type, lat, lon, usage });
+const nav = (ident: string, lat: number, lon: number, type = 'VOR-DME', usage = 'HI', country = ''): Navaid => ({ ident, name: ident, type, lat, lon, usage, country, source: 'ourairports' });
 const DEP = { lat: 0, lon: 0 };
 const ARR = { lat: 0, lon: 10 }; // ~600 nm east along the equator
 
@@ -119,5 +119,41 @@ describe('alternates and runways', () => {
     expect(pickRunway(noHdg, { dir: 340, speed: 15 }).reason).toMatch(/runway number/);
     const none: Airport = { ...rjtt, runways: [] };
     expect(pickRunway(none, null).runway).toBeNull();
+  });
+});
+
+describe('openAIP navaids', () => {
+  const sample = [
+    { name: 'DAOCHENG', identifier: 'dcy', type: 4, country: 'CN', geometry: { type: 'Point', coordinates: [100.06, 29.32] } },
+    { name: 'SOME NDB', identifier: 'XY', type: 2, country: 'CN', geometry: { type: 'Point', coordinates: [99.0, 29.5] } },
+    { name: 'DME ONLY', identifier: 'DM1', type: 0, geometry: { type: 'Point', coordinates: [99.0, 29.5] } },
+    { name: 'BROKEN', identifier: 'BAD', type: 3 },
+  ];
+
+  it('reads the JSON export and skips DMEs and broken rows', () => {
+    const rows = parseOpenAipNavaids(sample);
+    expect(rows.map((r) => [r[0], r[2], r[6], r[7]])).toEqual([['DCY', 'VOR-DME', 'CN', 'a'], ['XY', 'NDB', 'CN', 'a']]);
+    expect(rows[0][3]).toBe(29.32);
+  });
+
+  it('reads the GeoJSON export too', () => {
+    const geo = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [100.06, 29.32] }, properties: { name: 'DAOCHENG', identifier: 'DCY', type: 3 } }] };
+    expect(parseOpenAipNavaids(geo, 'CN').map((r) => [r[0], r[2], r[6]])).toEqual([['DCY', 'VOR', 'CN']]);
+    expect(parseOpenAipNavaids({ nope: true })).toEqual([]);
+  });
+
+  it('merges without duplicating beacons already present', () => {
+    const base: NavaidRow[] = [['DCY', 'Daocheng', 'VOR-DME', 29.33, 100.05, 'HI', 'CN', 'o']];
+    const { merged, added } = mergeNavaids(base, parseOpenAipNavaids(sample));
+    expect(added).toBe(1); // DCY is the same beacon (within 10 nm); XY is new
+    expect(merged.map((r) => r[0])).toEqual(['DCY', 'XY']);
+  });
+
+  it('keeps domestic routes on domestic beacons', () => {
+    const cn = (ident: string, lon: number, country: string) => nav(ident, 0, lon, 'VOR-DME', 'HI', country);
+    const r = generateRoute({ ...DEP, country: 'CN' }, { ...ARR, country: 'CN' }, [cn('FOREIGN', 3, 'IN'), cn('HOME', 6, 'CN')], 'navaids');
+    expect(r.route).toBe('HOME');
+    const intl = generateRoute({ ...DEP, country: 'CN' }, { ...ARR, country: 'IN' }, [cn('FOREIGN', 3, 'IN'), cn('HOME', 6, 'CN')], 'navaids');
+    expect(intl.route).toBe('FOREIGN DCT HOME');
   });
 });

@@ -16,8 +16,9 @@ server, no telemetry. Your data never leaves the device unless you export it.
 
 ## Quick start (works like SimBrief's dispatch)
 
-1. Open **Dispatch**. Pick the aircraft, type **From** and **To** (ICAO, name
-   or city; suggestions appear as you type), and set passengers and cargo.
+1. Open **Dispatch**. Pick the aircraft and type **From** and **To** (ICAO,
+   name or city; suggestions appear as you type). Leave **Load** on
+   **Random (like SimBrief)**, or set passengers and cargo yourself.
 2. Press **Generate flight**. By default SimPlanner picks:
    * **Route:** VOR-to-VOR (see below), or *Direct*, or *My own* to type it.
    * **Cruise level:** about FL100 + 0.75 × distance, capped at the
@@ -29,6 +30,10 @@ server, no telemetry. Your data never leaves the device unless you export it.
    * **Runways:** into the live METAR wind; the longest if there's no wind
      data. Where OurAirports has no runway heading, the runway number is used
      (16 → about 160°).
+   * **Payload (Random):** a passenger load factor between 55% and 100%,
+     most often about 85%, plus 5–70% of the cargo limit (most often 30%). If
+     that would exceed MZFW, MTOW or MLW for this trip, cargo comes off first,
+     then passengers. **New random load** on the OFP re-rolls it.
    Untick any of these to choose yourself.
 3. The **OFP** opens: summary, navlog, fuel & weights, weather, FMC sheet
    and a printable briefing, plus **MSFS .pln**, **Little Navmap**,
@@ -41,21 +46,50 @@ page and set `"verified": true`.
 ## How routes are generated
 
 SimBrief builds airway routes from licensed AIRAC navdata. SimPlanner ships
-none, so **VOR to VOR** uses the free OurAirports list of VOR, VOR-DME,
-VORTAC, TACAN and NDB beacons:
+none, so **VOR to VOR** uses free beacon lists: OurAirports (public domain)
+plus, where available, openAIP (CC BY-NC 4.0), covering VOR, VOR-DME, VORTAC,
+TACAN and NDB beacons:
 
 * only beacons within 50 nm of the great-circle track count, ignoring the
   first and last 30 nm (SID/STAR area);
 * it steps along the track choosing the beacon that makes the most progress
   in the next 60–220 nm while staying close to the line. High-altitude VORs
   beat low/terminal ones, and NDBs are used only when no VOR is in reach;
-* over long empty stretches (oceans) it flies direct to the next beacon.
+* over long empty stretches (oceans) it flies direct to the next beacon;
+* on a **domestic** flight it only uses beacons in that country, so a
+  flight inside China never routes via beacons in India or Myanmar.
+
+Coverage is the limit: the open data has few Chinese beacons in the west
+(around ZUDC/ZUNZ there are none), so those routes come out **Direct**. For
+a beacon route there, add the real fixes under *Waypoints* (from your charts)
+and choose **My own**.
 
 The result looks like `ZBAA AAA DCT BBB DCT CCC RJTT`. It is flyable in the
 FMC (type the beacon idents; pick the right one if the FMC offers several) but
 **it is not an ATC airway route**, and it has no SID or STAR. Add those in the
 FMC. Tuning values are `DEFAULT_ROUTE_OPTIONS` in
 `src/simplanner/lib/autoplan.ts`.
+
+## Small and high-elevation airports
+
+SimPlanner is meant for airports SimBrief may lack, like ZUDC (Daocheng
+Yading, 14,472 ft). For those it:
+
+* climbs from and descends to the **field elevation**, not sea level;
+* never suggests a cruise level below **10,000 ft above the higher airport**
+  (ZUDC → at least FL250). There's no terrain data, so check MEA/grid MORA on
+  your charts (Tibetan peaks exceed 20,000 ft);
+* warns when an airport is above 8,000 ft (performance is much tighter) or
+  its runway is shorter than the profile's `minRunwayFt`;
+* picks runways only from real numbered runways, using the runway number
+  when the data has no heading.
+
+`src/simplanner/realdata.test.ts` plans ten flights around ZUDC, ZUNZ, ZUKD,
+ZPDQ, ZPLJ, ZUJZ, ZLYS, ZUBD, ZUAL and ZULS for both the 737-800 and A320
+profiles against the real data in this repository. It checks that routes
+resolve, use only Chinese beacons, clear the minimum level, pick domestic
+alternates and real runways, and that the random load fits. It runs in CI
+on every deploy.
 
 ## Airport data
 

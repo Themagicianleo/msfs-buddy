@@ -55,7 +55,16 @@ function penalty(n: Navaid): number {
   return p;
 }
 
-export function generateRoute(dep: LatLon, arr: LatLon, navaids: Navaid[], mode: RouteMode, opts: RouteOptions = DEFAULT_ROUTE_OPTIONS): GeneratedRoute {
+type Place = LatLon & { country?: string };
+
+/**
+ * Build a route from beacons near the great circle. On a domestic flight
+ * (both airports in one country) only that country's beacons are used, so a
+ * flight inside China never routes via beacons in India or Myanmar.
+ */
+export function generateRoute(dep: Place, arr: Place, allNavaids: Navaid[], mode: RouteMode, opts: RouteOptions = DEFAULT_ROUTE_OPTIONS): GeneratedRoute {
+  const domestic = dep.country && dep.country === arr.country ? dep.country : '';
+  const navaids = domestic ? allNavaids.filter((n) => !n.country || n.country === domestic) : allNavaids;
   const directNm = distanceNm(dep, arr);
   if (mode === 'direct') return { route: 'DCT', navaids: [], directNm, routeNm: directNm, note: 'Direct great-circle route.' };
   if (!navaids.length) return { route: 'DCT', navaids: [], directNm, routeNm: directNm, note: 'No navaid data loaded, so the route is direct.' };
@@ -99,7 +108,7 @@ export function generateRoute(dep: LatLon, arr: LatLon, navaids: Navaid[], mode:
   const extra = ((routeNm / directNm - 1) * 100).toFixed(1);
   const note = picked.length
     ? `VOR-to-VOR route through ${picked.length} beacons, ${extra}% longer than direct. Not an airway route; add the SID and STAR in the FMC.`
-    : 'No beacons near the track, so the route is direct.';
+    : `No beacons near the track in the open data${domestic ? ` (only ${domestic} beacons are used on a domestic flight)` : ''}, so the route is direct. Add the real waypoints under Waypoints and choose "My own" for a beacon route.`;
   return { route, navaids: picked, directNm, routeNm, note };
 }
 
@@ -109,13 +118,29 @@ export function generateRoute(dep: LatLon, arr: LatLon, navaids: Navaid[], mode:
  * rule (eastbound odd thousands, westbound even). Uses TRUE course; the rule
  * is defined on magnetic track, so check it near 000°/180°.
  */
-export function suggestCruiseFl(distance: number, courseTrue: number, maxFl: number): number {
+export function suggestCruiseFl(distance: number, courseTrue: number, maxFl: number, minFl = 0): number {
+  const eastbound = courseTrue < 180;
+  const fits = (fl: number) => ((fl / 10) % 2 === 1) === eastbound;
   let fl = Math.min(maxFl, Math.max(100, 100 + distance * 0.75));
   fl = Math.floor(fl / 10) * 10;
-  const eastbound = courseTrue < 180;
-  const odd = (fl / 10) % 2 === 1;
-  if (eastbound !== odd) fl -= 10;
-  return Math.max(fl, eastbound ? 110 : 100);
+  if (!fits(fl)) fl -= 10;
+  fl = Math.max(fl, eastbound ? 110 : 100);
+  // Never below the minimum (high airports / terrain): round UP to a valid level.
+  if (fl < minFl) {
+    fl = Math.ceil(minFl / 10) * 10;
+    if (!fits(fl)) fl += 10;
+  }
+  return fl;
+}
+
+/**
+ * Lowest sensible cruise level without terrain data: 10,000 ft above the
+ * higher airport (ZUDC at 14,472 ft gives FL250). Check the real minimum
+ * enroute / grid altitudes on your charts; Tibet's peaks exceed 20,000 ft.
+ */
+export function minimumCruiseFl(...elevationsFt: (number | null | undefined)[]): number {
+  const top = Math.max(0, ...elevationsFt.map((e) => e ?? 0));
+  return Math.ceil((top + 10000) / 1000) * 10;
 }
 
 export interface AlternateSuggestion {
@@ -167,7 +192,8 @@ export interface RunwayPick {
  * Both METAR wind and OurAirports headings are TRUE.
  */
 export function pickRunway(a: Airport, wind: { dir: number | null; speed: number } | null, minLengthFt = 0): RunwayPick {
-  const all = a.runways.filter((r) => r.ident);
+  // Real runways only: skip glider (G), water (W), helipad and named strips.
+  const all = a.runways.filter((r) => /^\d{1,2}[LCR]?$/.test(r.ident));
   if (!all.length) return { runway: null, reason: 'no runway data' };
   const long = all.filter((r) => (r.lengthFt ?? 0) >= minLengthFt);
   const pool = long.length ? long : all;

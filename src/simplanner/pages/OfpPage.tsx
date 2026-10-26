@@ -8,6 +8,7 @@ import { useApp } from '../state';
 import type { Airport } from '../lib/airports';
 import type { RoutePoint } from '../lib/route';
 import { BriefingPage, WeatherSection } from './BriefingPage';
+import { describeLoad, fitPayload, randomPayload } from '../lib/payload';
 
 export function exportFlight(dep: Airport, arr: Airport, points: RoutePoint[], cruiseFl: number): ExportFlight {
   const ap = (a: Airport): ExportFlight['dep'] => ({ ident: a.icao, name: a.name, lat: a.lat, lon: a.lon, type: 'airport', source: a.source, via: '', elevationFt: a.elevationFt });
@@ -90,6 +91,11 @@ export function OfpPage() {
             <Tile k="LW" v={fmtWeight(plan.weights.lw)} u={u} bad={!limitOk('Landing weight')} />
             <Tile k="Pax / cargo" v={`${inputs.paxCount}`} u={`/ ${fmtWeight(inputs.cargo)} ${u}`} />
           </div>
+          <Section title="Load" actions={<button className="btn btn-small" onClick={reroll}>New random load</button>}>
+            <p style={{ margin: 0 }}>
+              {inputs.loadNote ?? `${inputs.paxCount} passengers and ${fmtWeight(inputs.cargo)} ${u} of cargo (set by hand).`}
+            </p>
+          </Section>
           <Section title="Route" actions={<CopyButton text={fullRoute} label="Copy route" />}>
             <p className="route-text">{fullRoute}</p>
             {inputs.routeNote && <p className="muted" style={{ marginBottom: 0 }}>{inputs.routeNote}</p>}
@@ -174,6 +180,22 @@ export function OfpPage() {
       {tab === 'print' && <BriefingPage />}
     </div>
   );
+
+  /** Roll a new random load for this flight, within the weight limits. */
+  function reroll() {
+    const rolled = randomPayload(profile, inputs);
+    const fit = fitPayload({ ...inputs, ...rolled }, profile, plan.distanceNm, plan.alternateDistanceNm, {
+      dep: dep?.elevationFt,
+      arr: arr?.elevationFt,
+      altn: altn?.elevationFt,
+    });
+    const loadNote = describeLoad(fit.paxCount, fit.cargo, profile.capacity.maxPax, u, fit.trimmed);
+    const next = { ...inputs, paxCount: fit.paxCount, cargo: fit.cargo, loadMode: 'random' as const, loadNote };
+    app.setInputs(next);
+    // Keep the saved copy of this flight in step.
+    const [latest, ...rest] = app.store.flights;
+    if (latest && latest.inputs.dep === inputs.dep && latest.inputs.arr === inputs.arr) app.update('flights', [{ ...latest, inputs: next }, ...rest]);
+  }
 
   function limitOk(name: string) {
     return plan.limits.find((l) => l.name === name)?.ok ?? true;

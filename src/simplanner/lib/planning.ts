@@ -73,17 +73,24 @@ export function flightPhases(
   windKt: number,
   label: string,
   formulas: string[],
+  fromElevFt = 0,
+  toElevFt = 0,
 ): { climb: PhaseResult; cruise: PhaseResult; descent: PhaseResult; scaled: boolean } {
   const b = perf.burnPerHour;
-  let climbMin = cruiseAltFt / perf.climbRateFpm;
+  // Climb from the departure field and descend to the arrival field, not from sea level.
+  const climbFt = Math.max(0, cruiseAltFt - fromElevFt);
+  const descFt = Math.max(0, cruiseAltFt - toElevFt);
+  let climbMin = climbFt / perf.climbRateFpm;
   let climbNm = (climbMin / 60) * perf.climbSpeedKt;
-  let descNm = (cruiseAltFt / 1000) * perf.descentNmPer1000ft;
+  let descNm = (descFt / 1000) * perf.descentNmPer1000ft;
   let descMin = (descNm / perf.descentSpeedKt) * 60;
 
+  const from = fromElevFt ? ` (${f0(cruiseAltFt)} − field ${f0(fromElevFt)})` : '';
+  const to = toElevFt ? ` (${f0(cruiseAltFt)} − field ${f0(toElevFt)})` : '';
   formulas.push(
-    `${label} climb time = ${f0(cruiseAltFt)} ft ÷ ${f0(perf.climbRateFpm)} fpm = ${f1(climbMin)} min`,
+    `${label} climb time = ${f0(climbFt)} ft${from} ÷ ${f0(perf.climbRateFpm)} fpm = ${f1(climbMin)} min`,
     `${label} climb distance = ${f1(climbMin)} min ÷ 60 × ${f0(perf.climbSpeedKt)} kt = ${f1(climbNm)} nm`,
-    `${label} descent distance = ${f0(cruiseAltFt / 1000)} × ${perf.descentNmPer1000ft} nm per 1,000 ft = ${f1(descNm)} nm`,
+    `${label} descent distance = ${f1(descFt / 1000)} thousand ft${to} × ${perf.descentNmPer1000ft} nm per 1,000 ft = ${f1(descNm)} nm`,
     `${label} descent time = ${f1(descNm)} nm ÷ ${f0(perf.descentSpeedKt)} kt × 60 = ${f1(descMin)} min`,
   );
 
@@ -134,7 +141,19 @@ function profileIn(p: AircraftProfile, unit: WeightUnit): AircraftProfile {
   };
 }
 
-export function computePlan(inputs: PlanInputs, profile: AircraftProfile, distanceNm: number, alternateDistanceNm: number): PlanResult {
+export interface FieldElevations {
+  dep?: number | null;
+  arr?: number | null;
+  altn?: number | null;
+}
+
+export function computePlan(
+  inputs: PlanInputs,
+  profile: AircraftProfile,
+  distanceNm: number,
+  alternateDistanceNm: number,
+  elev: FieldElevations = {},
+): PlanResult {
   const unit = inputs.units ?? profile.units;
   const p = profileIn(withVariant(profile, inputs.variant), unit);
   const formulas: string[] = [];
@@ -142,14 +161,18 @@ export function computePlan(inputs: PlanInputs, profile: AircraftProfile, distan
   const u = unit;
 
   const cruiseAlt = inputs.cruiseFl * 100;
-  const main = flightPhases(distanceNm, cruiseAlt, p.performance, inputs.windKt, 'Trip', formulas);
+  const main = flightPhases(distanceNm, cruiseAlt, p.performance, inputs.windKt, 'Trip', formulas, elev.dep ?? 0, elev.arr ?? 0);
   if (main.scaled) warnings.push(`The route is too short to reach FL${inputs.cruiseFl} in this model; pick a lower cruise level.`);
+  if (cruiseAlt < Math.max(elev.dep ?? 0, elev.arr ?? 0) + 5000) warnings.push(`FL${inputs.cruiseFl} is less than 5,000 ft above an airport: far too low.`);
   const tripFuel = main.climb.fuel + main.cruise.fuel + main.descent.fuel;
   const tripTimeMin = main.climb.timeMin + main.cruise.timeMin + main.descent.timeMin;
 
   let alternateFuel = 0;
   if (alternateDistanceNm > 0) {
-    const alt = flightPhases(alternateDistanceNm, p.reserves.alternateCruiseFl * 100, p.performance, 0, 'Alternate', formulas);
+    // The alternate leg must at least clear both fields by the usual margin.
+    const altnFl = Math.max(p.reserves.alternateCruiseFl, Math.ceil((Math.max(elev.arr ?? 0, elev.altn ?? 0) + 6000) / 1000) * 10);
+    if (altnFl !== p.reserves.alternateCruiseFl) formulas.push(`Alternate cruise raised to FL${altnFl} (6,000 ft above the higher of the arrival/alternate fields).`);
+    const alt = flightPhases(alternateDistanceNm, altnFl * 100, p.performance, 0, 'Alternate', formulas, elev.arr ?? 0, elev.altn ?? 0);
     alternateFuel = alt.climb.fuel + alt.cruise.fuel + alt.descent.fuel;
   } else {
     formulas.push('Alternate fuel = 0 (no alternate entered).');

@@ -41,6 +41,7 @@ export function defaultInputs(p: AircraftProfile): FlightInputs {
     autoCruise: true,
     autoAlternate: true,
     autoRunways: true,
+    loadMode: 'random',
   };
 }
 
@@ -157,7 +158,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setInputs({
       ...d,
       dep: inputs.dep, arr: inputs.arr, altn: inputs.altn, route: inputs.route, depRwy: inputs.depRwy, arrRwy: inputs.arrRwy, flightNo: inputs.flightNo,
-      routeMode: inputs.routeMode, autoCruise: inputs.autoCruise, autoAlternate: inputs.autoAlternate, autoRunways: inputs.autoRunways,
+      routeMode: inputs.routeMode, autoCruise: inputs.autoCruise, autoAlternate: inputs.autoAlternate, autoRunways: inputs.autoRunways, loadMode: inputs.loadMode,
       paxCount: Math.min(inputs.paxCount, p.capacity.maxPax),
     });
   };
@@ -178,7 +179,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const fix = (a: Airport | null): NavFix | null => (a ? index.toFix(a) : null);
     const route = parseRoute(inputs.route, providers, fix(dep), fix(arr));
     const altnNm = arr && altn ? distanceNm(arr, altn) : 0;
-    const plan = computePlan(inputs, profile, route.totalNm, altnNm);
+    const plan = computePlan(inputs, profile, route.totalNm, altnNm, { dep: dep?.elevationFt, arr: arr?.elevationFt, altn: altn?.elevationFt });
+    // Airport checks the fuel model can't see.
+    const minRwy = minRunway(profile);
+    for (const [role, a, rwy] of [['Departure', dep, inputs.depRwy], ['Arrival', arr, inputs.arrRwy], ['Alternate', altn, '']] as const) {
+      if (!a) continue;
+      const len = rwy ? a.runways.find((r) => r.ident === rwy)?.lengthFt : Math.max(0, ...a.runways.map((r) => r.lengthFt ?? 0));
+      if (len && len < minRwy) {
+        const which = rwy ? `runway ${rwy}` : 'longest runway';
+        plan.warnings.unshift(`${role} ${a.icao}: ${which} is ${len.toLocaleString('en-US')} ft, shorter than the ${minRwy.toLocaleString('en-US')} ft this aircraft profile needs.`);
+      }
+      if (!a.runways.length) plan.warnings.push(`${role} ${a.icao}: no runway data. Check the runway length yourself.`);
+      if ((a.elevationFt ?? 0) >= 8000) plan.warnings.push(`${role} ${a.icao} is a high-elevation airport (${Math.round(a.elevationFt!).toLocaleString('en-US')} ft): takeoff/landing performance and weight limits there are much tighter. Check with the aircraft's own performance tool.`);
+    }
     if (inputs.altn && !altn) plan.warnings.push(`Alternate ${inputs.altn.toUpperCase()} not found: alternate fuel is 0.`);
     const fmcText = renderTemplate(templates[profile.fmcTemplate] ?? `No FMC template "${profile.fmcTemplate}".`, templateVars(inputs, plan, route, profile.name));
     return { profile, units: plan.units, dep, arr, altn, route, plan, fmcText };

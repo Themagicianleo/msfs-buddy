@@ -133,18 +133,31 @@ export function DispatchPage() {
 
       <section className="section">
         <div className="section-head"><h2>3 · Load</h2></div>
-        <div className="form-grid">
-          <Field label="Passengers" hint={`of ${profile.capacity.maxPax} seats`}>
-            <NumberInput value={inputs.paxCount} onChange={(v) => set('paxCount', Math.round(v))} min={0} />
-          </Field>
-          <Field label="Quick fill">
-            <div className="row">
-              {[50, 75, 90, 100].map((p) => <button key={p} type="button" className="btn btn-small" onClick={() => loadFactor(p)}>{p}%</button>)}
-            </div>
-          </Field>
-          <Field label={`Cargo (${u})`}>
-            <NumberInput value={inputs.cargo} onChange={(v) => set('cargo', v)} min={0} />
-          </Field>
+        <div className="segmented" style={{ marginBottom: 12 }}>
+          <button type="button" className={inputs.loadMode === 'random' ? 'on' : ''} onClick={() => set('loadMode', 'random')}>Random (like SimBrief)</button>
+          <button type="button" className={inputs.loadMode === 'manual' ? 'on' : ''} onClick={() => set('loadMode', 'manual')}>I&apos;ll set it</button>
+        </div>
+        {inputs.loadMode === 'random' ? (
+          <p className="field-hint" style={{ marginTop: 0 }}>
+            Each Generate picks a realistic load: usually 75–95% of the {profile.capacity.maxPax} seats (sometimes lighter) plus some cargo,
+            then takes cargo and passengers off if the flight would exceed MZFW, MTOW or MLW. Re-roll it on the OFP.
+          </p>
+        ) : (
+          <div className="form-grid">
+            <Field label="Passengers" hint={`of ${profile.capacity.maxPax} seats`}>
+              <NumberInput value={inputs.paxCount} onChange={(v) => set('paxCount', Math.round(v))} min={0} />
+            </Field>
+            <Field label="Quick fill">
+              <div className="row">
+                {[50, 75, 90, 100].map((p) => <button key={p} type="button" className="btn btn-small" onClick={() => loadFactor(p)}>{p}%</button>)}
+              </div>
+            </Field>
+            <Field label={`Cargo (${u})`}>
+              <NumberInput value={inputs.cargo} onChange={(v) => set('cargo', v)} min={0} />
+            </Field>
+          </div>
+        )}
+        <div className="form-grid" style={{ marginTop: 12 }}>
           <Field label={`Weight per passenger (${u})`} hint="Including bags">
             <NumberInput value={inputs.paxWeight} onChange={(v) => set('paxWeight', v)} min={0} />
           </Field>

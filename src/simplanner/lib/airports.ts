@@ -39,14 +39,18 @@ export interface Navaid extends LatLon {
   type: string;
   /** OurAirports usage: HI, LO, BOTH, TERMINAL, RNAV or '' */
   usage: string;
+  /** ISO country code ('' if unknown). */
+  country: string;
+  /** Where the beacon came from: OurAirports or openAIP. */
+  source: 'ourairports' | 'openaip';
 }
 
 /** [icao, name, lat, lon, elevation, country, city, alias, size L/M/S, scheduled 1/0] */
 export type AirportRow = [string, string, number, number, number | null, string, string, string, string?, number?];
 /** [ident, lengthFt, headingTrue, surface] */
 export type RunwayRow = [string, number | null, number | null, string];
-/** [ident, name, type, lat, lon, usage] */
-export type NavaidRow = [string, string, string, number, number, string];
+/** [ident, name, type, lat, lon, usage, country, source o=OurAirports a=openAIP] */
+export type NavaidRow = [string, string, string, number, number, string, string?, string?];
 
 export interface AirportDataset {
   importedAt: string;
@@ -140,7 +144,7 @@ export function buildDataset(airportsCsv: string, runwaysCsv: string, source = '
     const lat = Number(n.latitude_deg);
     const lon = Number(n.longitude_deg);
     if (!n.ident || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-    navaids.push([n.ident.toUpperCase(), n.name, n.type, round(lat, 5), round(lon, 5), (n.usageType ?? '').toUpperCase()]);
+    navaids.push([n.ident.toUpperCase(), n.name, n.type, round(lat, 5), round(lon, 5), (n.usageType ?? '').toUpperCase(), (n.iso_country ?? '').toUpperCase(), 'o']);
   }
   return { importedAt: new Date().toISOString(), source, airports, runways, navaids };
 }
@@ -162,8 +166,8 @@ export class AirportIndex {
       if (alias && !this.byIcao.has(alias)) this.byIcao.set(alias, apt);
     }
     for (const a of custom) this.custom.set(a.icao.toUpperCase(), { ...a, source: 'custom' });
-    for (const [ident, name, type, lat, lon, usage] of dataset?.navaids ?? []) {
-      const n: Navaid = { ident, name, type, lat, lon, usage };
+    for (const [ident, name, type, lat, lon, usage, country, src] of dataset?.navaids ?? []) {
+      const n: Navaid = { ident, name, type, lat, lon, usage, country: country ?? '', source: src === 'a' ? 'openaip' : 'ourairports' };
       this.navaids.push(n);
       const list = this.navaidsByIdent.get(ident);
       if (list) list.push(n);
@@ -245,15 +249,62 @@ export class AirportIndex {
       findFix: (ident) =>
         (this.navaidsByIdent.get(ident) ?? []).map((n) => ({
           ident: n.ident,
-          name: `${n.name} ${n.type}`,
+          name: `${n.name} ${n.type}${n.country ? ', ' + n.country : ''}`,
           lat: n.lat,
           lon: n.lon,
           type: n.type.startsWith('NDB') ? 'ndb' : 'vor',
-          source: 'Navaids (OurAirports)',
+          source: n.source === 'openaip' ? 'Navaids (openAIP)' : 'Navaids (OurAirports)',
         })),
     };
   }
 }
+
+// openAIP navaid type codes (openAIP v2 schema).
+const OPENAIP_TYPES: Record<number, string> = { 1: 'TACAN', 2: 'NDB', 3: 'VOR', 4: 'VOR-DME', 5: 'VORTAC', 6: 'VOR', 7: 'VOR-DME', 8: 'VORTAC' };
+
+/**
+ * Read an openAIP navaid export (their JSON array, or GeoJSON). Returns
+ * NavaidRows; unknown shapes or types are skipped. openAIP data is licensed
+ * CC BY-NC 4.0 (https://www.openaip.net).
+ */
+export function parseOpenAipNavaids(json: unknown, fallbackCountry = ''): NavaidRow[] {
+  const items: Record<string, unknown>[] = Array.isArray(json)
+    ? (json as Record<string, unknown>[])
+    : json && typeof json === 'object' && Array.isArray((json as { features?: unknown }).features)
+      ? ((json as { features: { properties?: Record<string, unknown>; geometry?: unknown }[] }).features.map((f) => ({ ...f.properties, geometry: f.geometry })))
+      : [];
+  const rows: NavaidRow[] = [];
+  for (const it of items) {
+    const type = OPENAIP_TYPES[Number(it.type)];
+    const coords = (it.geometry as { coordinates?: unknown } | undefined)?.coordinates;
+    const ident = typeof it.identifier === 'string' ? it.identifier.trim().toUpperCase() : '';
+    if (!type || !ident || !Array.isArray(coords) || coords.length < 2) continue;
+    const [lon, lat] = coords.map(Number);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+    const country = (typeof it.country === 'string' ? it.country : fallbackCountry).toUpperCase();
+    rows.push([ident, typeof it.name === 'string' ? it.name : ident, type, round(lat, 5), round(lon, 5), '', country, 'a']);
+  }
+  return rows;
+}
+
+/** Add beacons that aren't already there (same ident within 10 nm counts as the same). */
+export function mergeNavaids(base: NavaidRow[], extra: NavaidRow[]): { merged: NavaidRow[]; added: number } {
+  const byIdent = new Map<string, NavaidRow[]>();
+  for (const n of base) byIdent.set(n[0], [...(byIdent.get(n[0]) ?? []), n]);
+  const merged = [...base];
+  let added = 0;
+  for (const n of extra) {
+    const same = (byIdent.get(n[0]) ?? []).some((b) => distanceNm({ lat: b[3], lon: b[4] }, { lat: n[3], lon: n[4] }) < 10);
+    if (same) continue;
+    merged.push(n);
+    byIdent.set(n[0], [...(byIdent.get(n[0]) ?? []), n]);
+    added++;
+  }
+  return { merged, added };
+}
+
+/** Public openAIP export bucket (daily per-country files). */
+export const OPENAIP_EXPORT = 'https://storage.googleapis.com/29f98e10-a489-4c82-ae5e-489dbcd4912f';
 
 /** Where the GitHub Action downloads from (see scripts/build-airport-data.ts). */
 export const OURAIRPORTS_URLS = {
