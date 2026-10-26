@@ -1,5 +1,5 @@
 import type { LoadState } from '../App';
-import type { Page } from '../components/SideNav';
+import type { Page } from '../components/nav';
 import { CatBadge, Field, Panel } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { RouteMap } from '../components/RouteMap';

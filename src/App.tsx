@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { TopBar } from './components/TopBar';
-import { PAGE_TITLES, SideNav, type Page } from './components/SideNav';
+import { useCallback, useEffect, useState } from 'react';
+import { Icon } from './components/Icon';
+import { LINKS, MORE, PAGE_TITLES, TABS, type Page } from './components/nav';
+import { AppShell, ClockCapsule } from './shared/AppShell';
 import { FlightPage } from './pages/FlightPage';
 import { OfpPage } from './pages/OfpPage';
 import { MapPage } from './pages/MapPage';
@@ -26,14 +27,8 @@ export default function App() {
   const settings = { ...DEFAULT_SETTINGS, ...stored };
   const [plan, setPlan] = useState<FlightPlan | null>(() => load<FlightPlan | null>('plan', null));
   const [state, setState] = useState<LoadState>({ status: 'idle' });
-  const [scrolled, setScrolled] = useState(false);
-  const content = useRef<HTMLDivElement>(null);
-
   // Each page starts at the top, with the large title showing.
-  useEffect(() => {
-    content.current?.scrollTo(0, 0);
-    setScrolled(false);
-  }, [page]);
+  useEffect(() => window.scrollTo(0, 0), [page]);
 
   const theme = useResolvedTheme(settings.appearance);
   useEffect(() => applyTheme(theme), [theme]);
@@ -67,28 +62,33 @@ export default function App() {
 
   const common = { plan, settings, theme };
 
+  const actions = (
+    <>
+      {state.status === 'error' && <span className="pill danger" title={state.message}>SimBrief error</span>}
+      <ClockCapsule local={settings.showLocalTime} hour12={!settings.clock24} />
+      <button className="capsule icon" onClick={refresh} title="Fetch latest SimBrief OFP" disabled={state.status === 'loading'}>
+        <span className={state.status === 'loading' ? 'spin' : ''}><Icon name="refresh" size={20} /></span>
+      </button>
+    </>
+  );
+  const subtitle = plan && `${plan.callsign || plan.flightNumber} · ${plan.origin.icao} – ${plan.destination.icao} · ${plan.aircraft.icao}`;
+
   return (
-    <div className={`efb ${settings.reduceTransparency ? 'solid' : ''}`}>
-      <SideNav page={page} onSelect={setPage} />
-      <div className="efb-content" ref={content} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 40)}>
-        <TopBar title={PAGE_TITLES[page]} scrolled={scrolled} plan={plan} state={state} settings={settings} onRefresh={refresh} />
-        <main className="efb-main">
-          {page === 'flight' && (
-            <FlightPage {...common} state={state} onRefresh={refresh} onDemo={loadDemo} onGoto={setPage} />
-          )}
-          {page === 'ofp' && <OfpPage {...common} />}
-          {page === 'map' && <MapPage {...common} />}
-          {page === 'weather' && <WeatherPage {...common} />}
-          {page === 'charts' && <ChartsPage {...common} />}
-          {page === 'perf' && <PerfPage {...common} />}
-          {page === 'loadsheet' && <LoadsheetPage {...common} />}
-          {page === 'notes' && <NotesPage {...common} />}
-          {page === 'logbook' && <LogbookPage {...common} />}
-          {page === 'settings' && (
-            <SettingsPage settings={settings} onChange={setSettings} onRefresh={refresh} onDemo={loadDemo} state={state} />
-          )}
-        </main>
-      </div>
-    </div>
+    <AppShell name="EFB" actions={actions} title={PAGE_TITLES[page]} subtitle={subtitle} tabs={TABS} more={MORE} links={LINKS} page={page} onSelect={setPage} solid={settings.reduceTransparency}>
+      {page === 'flight' && (
+        <FlightPage {...common} state={state} onRefresh={refresh} onDemo={loadDemo} onGoto={setPage} />
+      )}
+      {page === 'ofp' && <OfpPage {...common} />}
+      {page === 'map' && <MapPage {...common} />}
+      {page === 'weather' && <WeatherPage {...common} />}
+      {page === 'charts' && <ChartsPage {...common} />}
+      {page === 'perf' && <PerfPage {...common} />}
+      {page === 'loadsheet' && <LoadsheetPage {...common} />}
+      {page === 'notes' && <NotesPage {...common} />}
+      {page === 'logbook' && <LogbookPage {...common} />}
+      {page === 'settings' && (
+        <SettingsPage settings={settings} onChange={setSettings} onRefresh={refresh} onDemo={loadDemo} state={state} />
+      )}
+    </AppShell>
   );
 }

@@ -107,6 +107,40 @@ const ICONS: Record<string, ReactNode> = {
     </>
   ),
   chevron: <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />,
+  dispatch: (
+    <>
+      <path d="M20.5 3.5 3.5 10.6l6.8 2.6 2.6 6.8z" />
+      <path d="m10.3 13.2 4.4-4.4" />
+    </>
+  ),
+  flights: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+  airports: (
+    <>
+      <path d="M9.5 21v-9.5h5V21M7 11.5h10l-1.5-4h-7zM12 7.5V3.5" />
+      <path d="M4 21h16" />
+    </>
+  ),
+  waypoints: (
+    <>
+      <path d="m12 4 8 14H4z" />
+      <circle cx="12" cy="13" r="1.2" fill="currentColor" />
+    </>
+  ),
+  aircraft: (
+    <path d="M2.5 13.5h6l3.5 6h2.5L12.5 13.5H18l2 2.5h1.5l-1-4 1-4H20l-2 2.5h-5.5l2-6H12L8.5 11.5h-6z" />
+  ),
+  efb: (
+    <>
+      <rect x="5" y="2.5" width="14" height="19" rx="3" />
+      <path d="M9 17.5c1.5-4 4.5-3.5 6-9" strokeDasharray="0.5 2.2" />
+      <circle cx="9" cy="17.5" r="1" fill="currentColor" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 22 }: { name: string; size?: number }) {

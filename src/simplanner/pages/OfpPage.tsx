@@ -45,7 +45,7 @@ export function OfpPage() {
 
   return (
     <div>
-      <div className="ofp-head">
+      <div className="hero-tile ofp-head">
         <div className="ofp-od">
           <div>
             <div className="ofp-icao">{dep.icao}</div>

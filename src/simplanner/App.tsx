@@ -5,6 +5,7 @@ import { OfpPage } from './pages/OfpPage';
 import { AircraftPage, AirportsPage, FlightsPage, SettingsPage, WaypointsPage } from './pages/DataPages';
 import { decodeShare } from './lib/store';
 import type { SharedFlight } from './lib/snapshot';
+import { AppShell, ClockCapsule, type AppLink, type NavItem } from '../shared/AppShell';
 
 const PAGES = [
   ['dispatch', 'Dispatch'],
@@ -16,6 +17,12 @@ const PAGES = [
   ['settings', 'Settings'],
 ] as const;
 type PageId = (typeof PAGES)[number][0];
+
+const item = (id: PageId): NavItem<PageId> => ({ id, label: PAGES.find(([p]) => p === id)![1], icon: id });
+const TABS = (['dispatch', 'ofp', 'flights'] as PageId[]).map(item);
+const MORE = (['airports', 'waypoints', 'aircraft', 'settings'] as PageId[]).map(item);
+const LINKS: AppLink[] = [{ href: import.meta.env.BASE_URL, label: 'EFB', icon: 'efb' }];
+const TITLES: Record<PageId, string> = { dispatch: 'Plan a flight', ofp: 'Flight plan', flights: 'Flights', airports: 'Airports', waypoints: 'Waypoints', aircraft: 'Aircraft', settings: 'Settings' };
 
 function useHashPage(): PageId {
   const read = () => {
@@ -71,27 +78,29 @@ function ShareImport() {
 
 function Shell() {
   const page = useHashPage();
+  const { inputs } = useApp();
+  const subtitle = page === 'ofp' && inputs.dep && inputs.arr ? `${inputs.flightNo ? `${inputs.flightNo} · ` : ''}${inputs.dep} – ${inputs.arr}` : undefined;
   return (
-    <>
-      <header className="topbar">
-        <div className="brand">Sim<span>Planner</span></div>
-        <nav className="nav">
-          {PAGES.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className={page === id ? 'active' : ''}>{label}</a>
-          ))}
-        </nav>
-      </header>
-      <main>
-        <ShareImport />
-        {page === 'dispatch' && <DispatchPage />}
-        {page === 'ofp' && <OfpPage />}
-        {page === 'flights' && <FlightsPage />}
-        {page === 'airports' && <AirportsPage />}
-        {page === 'waypoints' && <WaypointsPage />}
-        {page === 'aircraft' && <AircraftPage />}
-        {page === 'settings' && <SettingsPage />}
-      </main>
-    </>
+    <AppShell
+      name="SimPlanner"
+      actions={<ClockCapsule />}
+      title={TITLES[page]}
+      subtitle={subtitle}
+      tabs={TABS}
+      more={MORE}
+      links={LINKS}
+      page={page}
+      onSelect={(p) => (location.hash = `#${p}`)}
+    >
+      <ShareImport />
+      {page === 'dispatch' && <DispatchPage />}
+      {page === 'ofp' && <OfpPage />}
+      {page === 'flights' && <FlightsPage />}
+      {page === 'airports' && <AirportsPage />}
+      {page === 'waypoints' && <WaypointsPage />}
+      {page === 'aircraft' && <AircraftPage />}
+      {page === 'settings' && <SettingsPage />}
+    </AppShell>
   );
 }
 

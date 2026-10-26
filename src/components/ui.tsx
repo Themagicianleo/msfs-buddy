@@ -3,16 +3,14 @@ import type { FlightCategory } from '../lib/metar';
 
 export function Panel({ title, right, children, className = '' }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`section ${className}`}>
+    <section className={`card panel ${className}`}>
       {(title || right) && (
-        <div className="section-head">
-          <h3>{title}</h3>
+        <div className="card-head">
+          <h2>{title}</h2>
           {right}
         </div>
       )}
-      <div className="card">
-        <div className="card-body">{children}</div>
-      </div>
+      <div className="card-body">{children}</div>
     </section>
   );
 }
