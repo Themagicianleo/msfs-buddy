@@ -30,7 +30,17 @@ const ds = buildDataset(airports, runways, `OurAirports, downloaded ${date}`, na
 async function openAipNavaids(countries: string[]): Promise<NavaidRow[]> {
   const rows: NavaidRow[] = [];
   const stats: string[] = [];
+  const statuses = new Map<string, number>();
   let failures = 0;
+  // Diagnostic: what the export bucket actually contains (names change over time).
+  try {
+    const bucket = OPENAIP_EXPORT.split('/').pop();
+    const list = await fetch(`https://storage.googleapis.com/storage/v1/b/${bucket}/o?prefix=cn&maxResults=20`);
+    const body = list.ok ? ((await list.json()) as { items?: { name: string }[] }) : null;
+    console.log(`openAIP bucket listing: HTTP ${list.status}${body ? ': ' + (body.items ?? []).map((i) => i.name).join(', ') : ''}`);
+  } catch (e) {
+    console.log(`openAIP bucket listing failed: ${(e as Error).message}`);
+  }
   const queue = [...countries];
   const worker = async () => {
     for (let cc = queue.shift(); cc; cc = queue.shift()) {
@@ -38,6 +48,7 @@ async function openAipNavaids(countries: string[]): Promise<NavaidRow[]> {
         const res = await fetch(`${OPENAIP_EXPORT}/${cc.toLowerCase()}_nav.json`);
         if (!res.ok) {
           failures++;
+          statuses.set(String(res.status), (statuses.get(String(res.status)) ?? 0) + 1);
           continue;
         }
         const got = parseOpenAipNavaids(await res.json(), cc);
@@ -49,7 +60,7 @@ async function openAipNavaids(countries: string[]): Promise<NavaidRow[]> {
     }
   };
   await Promise.all(Array.from({ length: 8 }, worker));
-  console.log(`openAIP: ${rows.length} beacons from ${stats.length} countries (${failures} countries unavailable). ${stats.sort().join(' ')}`);
+  console.log(`openAIP: ${rows.length} beacons from ${stats.length} countries (${failures} countries unavailable; HTTP ${[...statuses].map(([k, v]) => `${k}×${v}`).join(', ') || '-'}). ${stats.sort().join(' ')}`);
   return rows;
 }
 
