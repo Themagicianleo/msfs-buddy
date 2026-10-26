@@ -141,6 +141,7 @@ h1, h2, h3 { margin: 0; }
 }
 .sidebar-row svg { color: var(--blue); flex-shrink: 0; }
 .sidebar-row:hover:not(.active) { background: var(--fill-3); }
+a.sidebar-row, a.list-row { text-decoration: none; }
 .sidebar-row.active { background: var(--blue); color: #fff; font-weight: 600; }
 .sidebar-row.active svg { color: #fff; }
 

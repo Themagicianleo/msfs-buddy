@@ -22,6 +22,9 @@ const SECTIONS: { title: string; items: Page[] }[] = [
   { title: 'Pilot', items: ['notes', 'logbook'] },
 ];
 
+// SimPlanner is a separate page on the same site (hand-entered flight planning).
+const SIMPLANNER_URL = `${import.meta.env.BASE_URL}simplanner/`;
+
 // The phone tab bar shows these; everything else lives under More.
 const TABS: Page[] = ['flight', 'weather', 'charts', 'logbook'];
 
@@ -52,6 +55,13 @@ export function SideNav({ page, onSelect }: { page: Page; onSelect: (p: Page) =>
             ))}
           </div>
         ))}
+        <div className="sidebar-section">
+          <div className="sidebar-heading">Tools</div>
+          <a className="sidebar-row" href={SIMPLANNER_URL}>
+            <Icon name="planner" size={20} />
+            <span>SimPlanner</span>
+          </a>
+        </div>
         <div className="sidebar-spacer" />
         <button className={`sidebar-row ${page === 'settings' ? 'active' : ''}`} onClick={() => pick('settings')}>
           <Icon name="settings" size={20} />
@@ -84,6 +94,11 @@ export function SideNav({ page, onSelect }: { page: Page; onSelect: (p: Page) =>
                   <Icon name="chevron" size={16} />
                 </button>
               ))}
+              <a className="list-row" href={SIMPLANNER_URL}>
+                <span className="list-icon"><Icon name="planner" size={20} /></span>
+                <span className="list-label">SimPlanner</span>
+                <Icon name="chevron" size={16} />
+              </a>
             </div>
           </div>
         </div>

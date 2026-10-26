@@ -65,6 +65,15 @@ const ICONS: Record<string, ReactNode> = {
       <circle cx="8.5" cy="17" r="2" />
     </>
   ),
+  planner: (
+    <>
+      <rect x="5" y="4" width="14" height="17" rx="2.5" />
+      <path d="M9 4V3h6v1" />
+      <circle cx="9" cy="16.5" r="1.3" fill="currentColor" />
+      <path d="M10.3 16c2.5-.5 2.2-4.2 4.7-5.5" />
+      <circle cx="15.2" cy="9.8" r="1.6" />
+    </>
+  ),
   more: (
     <>
       <circle cx="12" cy="12" r="9" />
