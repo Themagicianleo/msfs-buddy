@@ -18,7 +18,7 @@ export function DispatchPage() {
   const generate = async () => {
     setBusy(true);
     setErrors([]);
-    const res = await generateFlight(inputs, profile, app.index, undefined, undefined, app.routeLibrary);
+    const res = await generateFlight(inputs, profile, app.index, { library: app.routeLibrary, airways: app.airways });
     setBusy(false);
     if (res.errors.length) {
       setErrors(res.errors);
@@ -81,11 +81,11 @@ export function DispatchPage() {
           <div className="option">
             <span className="field-label">Route</span>
             <div className="segmented">
-              {([['navaids', 'VOR to VOR'], ['direct', 'Direct'], ['manual', 'My own']] as const).map(([id, label]) => (
+              {([['airways', 'Airways'], ['navaids', 'VOR to VOR'], ['direct', 'Direct'], ['manual', 'My own']] as const).map(([id, label]) => (
                 <button key={id} type="button" className={inputs.routeMode === id ? 'on' : ''} onClick={() => set('routeMode', id)}>{label}</button>
               ))}
             </div>
-            {inputs.routeMode === 'navaids' && published.length > 0 && (
+            {(inputs.routeMode === 'airways' || inputs.routeMode === 'navaids') && published.length > 0 && (
               <Field label="CAAC published route" hint="From the route lists you imported under Settings">
                 <select className="input" value={inputs.publishedRoute === 'off' ? 'off' : published.some((p) => p.code === inputs.publishedRoute) ? inputs.publishedRoute : published[0].code} onChange={(e) => set('publishedRoute', e.target.value)}>
                   {published.map((p) => <option key={p.code} value={p.code}>{p.code}: {p.route.length > 60 ? `${p.route.slice(0, 60)}…` : p.route}</option>)}
@@ -97,11 +97,15 @@ export function DispatchPage() {
               <textarea className="input" value={inputs.route} onChange={(e) => set('route', e.target.value.toUpperCase())} spellCheck={false} placeholder="SID WPT1 W5 WPT2 STAR" />
             ) : (
               <span className="field-hint">
-                {inputs.routeMode === 'navaids'
-                  ? published.length && inputs.publishedRoute !== 'off'
-                    ? 'Uses the CAAC published route above (airways and fixes as filed). You can edit it afterwards with "My own".'
-                    : 'Built from VOR/NDB beacons near the direct track. Not an ATC airway route (no airway data). You can edit it afterwards with "My own".'
-                  : 'Straight great-circle line (DCT).'}
+                {(inputs.routeMode === 'airways' || inputs.routeMode === 'navaids') && published.length > 0 && inputs.publishedRoute !== 'off'
+                  ? 'Uses the CAAC published route above (airways and fixes as filed). You can edit it afterwards with "My own".'
+                  : inputs.routeMode === 'airways'
+                    ? app.airways
+                      ? `Shortest route along the airways in your ${app.airways.data.dataSource || 'simulator'} navdata, like SimBrief. Not ATC-validated; you can edit it afterwards with "My own".`
+                      : <>No airway data yet: import it under <a href="#settings">Settings → Airways</a>. Until then this builds a VOR-to-VOR route.</>
+                    : inputs.routeMode === 'navaids'
+                      ? 'Built from VOR/NDB beacons near the direct track. Not an ATC airway route. You can edit it afterwards with "My own".'
+                      : 'Straight great-circle line (DCT).'}
               </span>
             )}
           </div>

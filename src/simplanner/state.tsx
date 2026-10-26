@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AirportIndex, type Airport, type AirportDataset } from './lib/airports';
 import { DEFAULT_TEMPLATES, renderTemplate, templateVars } from './lib/fmc';
 import { distanceNm } from './lib/geo';
+import { AIRWAYS_KEY, AirwayGraph, type AirwayData } from './lib/airways';
 import { ROUTE_LIBRARY_KEY, type RouteLibrary } from './lib/caac';
 import { idbDelete, idbGet, idbSet } from './lib/idb';
 import { customWaypointProvider, type NavFix } from './lib/navdata';
@@ -38,7 +39,7 @@ export function defaultInputs(p: AircraftProfile): FlightInputs {
     depRwy: '',
     arrRwy: '',
     flightNo: '',
-    routeMode: 'navaids',
+    routeMode: 'airways',
     autoCruise: true,
     autoAlternate: true,
     autoRunways: true,
@@ -74,6 +75,9 @@ interface Ctx {
   /** Your imported CAAC route lists (this browser only). */
   routeLibrary: RouteLibrary | null;
   setRouteLibrary: (lib: RouteLibrary | null) => void;
+  /** Airway network from your simulator (this browser only). */
+  airways: AirwayGraph | null;
+  setAirwayData: (d: AirwayData | null) => void;
   index: AirportIndex;
   profiles: AircraftProfile[];
   templates: Record<string, string>;
@@ -103,6 +107,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     idbGet<RouteLibrary>(ROUTE_LIBRARY_KEY).then((l) => l && setLibraryState(l)).catch(() => undefined);
   }, []);
+
+  const [airwayData, setAirwayState] = useState<AirwayData | null>(null);
+  useEffect(() => {
+    idbGet<AirwayData>(AIRWAYS_KEY).then((d) => d && setAirwayState(d)).catch(() => undefined);
+  }, []);
+  const setAirwayData = useCallback((d: AirwayData | null) => {
+    setAirwayState(d);
+    (d ? idbSet(AIRWAYS_KEY, d) : idbDelete(AIRWAYS_KEY)).catch(() => undefined);
+  }, []);
+  const airways = useMemo(() => (airwayData ? new AirwayGraph(airwayData) : null), [airwayData]);
 
   const setRouteLibrary = useCallback((lib: RouteLibrary | null) => {
     setLibraryState(lib);
@@ -189,7 +203,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const dep = inputs.dep ? index.get(inputs.dep) : null;
     const arr = inputs.arr ? index.get(inputs.arr) : null;
     const altn = inputs.altn ? index.get(inputs.altn) : null;
-    const providers = [customWaypointProvider(store.waypoints), index.provider(), index.navaidProvider()];
+    const providers = [customWaypointProvider(store.waypoints), index.provider(), ...(airways ? [airways.provider()] : []), index.navaidProvider()];
     const fix = (a: Airport | null): NavFix | null => (a ? index.toFix(a) : null);
     const route = parseRoute(inputs.route, providers, fix(dep), fix(arr));
     const altnNm = arr && altn ? distanceNm(arr, altn) : 0;
@@ -209,10 +223,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (inputs.altn && !altn) plan.warnings.push(`Alternate ${inputs.altn.toUpperCase()} not found: alternate fuel is 0.`);
     const fmcText = renderTemplate(templates[profile.fmcTemplate] ?? `No FMC template "${profile.fmcTemplate}".`, templateVars(inputs, plan, route, profile.name));
     return { profile, units: plan.units, dep, arr, altn, route, plan, fmcText };
-  }, [inputs, index, store.waypoints, profiles, templates]);
+  }, [inputs, index, airways, store.waypoints, profiles, templates]);
 
   const value: Ctx = {
-    store, update, replaceStore, dataset, datasetLoading, datasetError, routeLibrary, setRouteLibrary, index, profiles, templates,
+    store, update, replaceStore, dataset, datasetLoading, datasetError, routeLibrary, setRouteLibrary, airways, setAirwayData, index, profiles, templates,
     inputs, setInputs, changeProfile, changeUnits, derived,
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

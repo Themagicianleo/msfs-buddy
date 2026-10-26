@@ -6,6 +6,7 @@
 import { parseMetar } from '../lib/metar';
 import type { AirportIndex } from './lib/airports';
 import { generateRoute, minimumCruiseFl, pickRunway, suggestAlternates, suggestCruiseFl } from './lib/autoplan';
+import type { AirwayGraph } from './lib/airways';
 import { describePublished, findPublishedRoutes, type RouteLibrary } from './lib/caac';
 import { describeLoad, fitPayload, randomPayload, type Rng } from './lib/payload';
 import { distanceNm, initialCourseTrue } from './lib/geo';
@@ -22,13 +23,20 @@ export interface GenerateResult {
 
 type WeatherFn = (ids: string[]) => Promise<{ stations: Record<string, { metar: string }> }>;
 
+export interface GenerateOptions {
+  weather?: WeatherFn;
+  rng?: Rng;
+  /** Imported CAAC published routes. */
+  library?: RouteLibrary | null;
+  /** Airway network from your simulator (Settings → Airways). */
+  airways?: AirwayGraph | null;
+}
+
 export async function generateFlight(
   inputs: FlightInputs,
   profile: AircraftProfile,
   index: AirportIndex,
-  weather: WeatherFn = getWeather,
-  rng: Rng = Math.random,
-  library: RouteLibrary | null = null,
+  { weather = getWeather, rng = Math.random, library = null, airways = null }: GenerateOptions = {},
 ): Promise<GenerateResult> {
   const errors: string[] = [];
   const notes: string[] = [];
@@ -46,16 +54,27 @@ export async function generateFlight(
 
   // Estimated route length, for the cruise level and payload limits.
   let routeNm = distanceNm(dep, arr) * 1.05;
-  const published = inputs.routeMode === 'navaids' && inputs.publishedRoute !== 'off' ? findPublishedRoutes(library, dep.icao, arr.icao) : [];
+  const published = (inputs.routeMode === 'airways' || inputs.routeMode === 'navaids') && inputs.publishedRoute !== 'off' ? findPublishedRoutes(library, dep.icao, arr.icao) : [];
   const chosen = published.find((p) => p.code === inputs.publishedRoute) ?? published[0];
+  const airwayRoute = !chosen && inputs.routeMode === 'airways' ? (airways?.route(dep, arr) ?? null) : null;
   if (chosen) {
     const cycle = library?.lists.find((l) => l.kind === chosen.kind)?.cycle ?? '';
     next.route = chosen.route;
     next.routeNote = `${describePublished(chosen, cycle, dep.icao, arr.icao)}${published.length > 1 ? ` ${published.length - 1} other published option${published.length > 2 ? 's' : ''}: ${published.filter((p) => p !== chosen).map((p) => p.code).join(', ')}.` : ''} Fixes missing from the open data are left out of the distance; your FMC knows them.`;
     notes.push(`Route: ${next.routeNote}`);
-    routeNm = Math.max(routeNm, parseRoute(chosen.route, [index.provider(), index.navaidProvider()], index.toFix(dep), index.toFix(arr)).totalNm);
+    const providers = [index.provider(), ...(airways ? [airways.provider()] : []), index.navaidProvider()];
+    routeNm = Math.max(routeNm, parseRoute(chosen.route, providers, index.toFix(dep), index.toFix(arr)).totalNm);
+  } else if (airwayRoute) {
+    const r = airwayRoute;
+    next.route = r.route;
+    next.routeNote = r.note;
+    routeNm = r.routeNm;
+    notes.push(`Route: ${r.note}`);
   } else if (inputs.routeMode !== 'manual') {
-    const r = generateRoute(dep, arr, index.navaids, inputs.routeMode);
+    const r = generateRoute(dep, arr, index.navaids, inputs.routeMode === 'airways' ? 'navaids' : inputs.routeMode);
+    if (inputs.routeMode === 'airways') {
+      r.note = `${airways ? 'No airway route found near these airports' : 'No airway data loaded (Settings → Airways)'}, so VOR to VOR is used. ${r.note}`;
+    }
     next.route = r.route;
     next.routeNote = r.note;
     routeNm = r.routeNm;

@@ -53,7 +53,7 @@ describe.skipIf(!ds)('real airport data: small Chinese airports', () => {
     const profile = DEFAULT_PROFILES.find((p) => p.id === profileId)!;
     for (const [from, to] of FLIGHTS) {
       it(`${profile.name}: ${from} → ${to}`, async () => {
-        const r = await generateFlight({ ...defaultInputs(profile), dep: from, arr: to }, profile, index, calm, seededRng(from.charCodeAt(2) * 31 + to.charCodeAt(3)));
+        const r = await generateFlight({ ...defaultInputs(profile), dep: from, arr: to }, profile, index, { weather: calm, rng: seededRng(from.charCodeAt(2) * 31 + to.charCodeAt(3)) });
         expect(r.errors).toEqual([]);
         const i = r.inputs;
         const dep = index.get(from)!;

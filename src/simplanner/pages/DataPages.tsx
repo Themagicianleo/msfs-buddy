@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Field, NumberInput, Section, TextInput } from '../components/ui';
 import type { Airport, Runway } from '../lib/airports';
+import { extractAirways } from '../lib/airways';
 import { addLists, kindLabel, parseCaacRoutes, type RouteList } from '../lib/caac';
+import { fileSource } from '../lib/sqlite';
 import { DEFAULT_TEMPLATES, PLACEHOLDERS } from '../lib/fmc';
 import { parseWaypointCsv, type CustomWaypoint } from '../lib/navdata';
 import { DEFAULT_PROFILES, validateProfile, type AircraftProfile } from '../lib/profiles';
@@ -337,6 +339,8 @@ export function SettingsPage() {
         <p className="muted">Airport data comes with the website, so it isn't in the backup.</p>
       </Section>
 
+      <AirwaysSection />
+
       <PublishedRoutesSection />
 
       <Section title="Using it on other devices">
@@ -410,6 +414,61 @@ function PublishedRoutesSection() {
         CAAC republishes these every AIRAC cycle (28 days); import the new files when the cycle changes. International routes only cover the part
         inside China. The lists have no coordinates, so fixes that aren&apos;t in the open beacon data are left out of the distance; add them under
         Waypoints for an exact distance.
+      </p>
+    </Section>
+  );
+}
+
+function AirwaysSection() {
+  const app = useApp();
+  const g = app.airways;
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const file = useRef<HTMLInputElement>(null);
+  return (
+    <Section title="Airways (from your simulator)">
+      <p style={{ marginTop: 0 }}>
+        For SimBrief-style airway routes, SimPlanner reads the airways and waypoints that <b>Little Navmap</b> (free) loads from your MSFS. The file
+        stays in this browser: it is read here, never uploaded, and it is not in the backup.
+      </p>
+      <ol style={{ margin: '0 0 12px', paddingLeft: 22 }}>
+        <li>In Little Navmap, choose <i>Scenery Library → Load Scenery Library</i> for MSFS 2024 and wait until it finishes.</li>
+        <li>Press <b>Import database…</b> below and open the folder <code>%APPDATA%\ABarthel\little_navmap_db</code> (paste it into the file dialog&apos;s address bar).</li>
+        <li>Pick the database for MSFS (its name contains <code>msfs</code>, e.g. <code>little_navmap_msfs24.sqlite</code>). Not the <code>navigraph</code> one.</li>
+      </ol>
+      {g && (
+        <p className="muted">
+          Loaded {g.data.fileName}: {g.segmentCount.toLocaleString('en-US')} airway segments, {g.fixCount.toLocaleString('en-US')} fixes
+          {g.data.dataSource ? `, source ${g.data.dataSource}` : ''}{g.data.cycle ? `, cycle ${g.data.cycle}` : ''}, imported {g.data.importedAt.slice(0, 10)}.
+        </p>
+      )}
+      <div className="row">
+        <button className="btn btn-primary" disabled={busy} onClick={() => file.current?.click()}>{busy ? 'Reading…' : g ? 'Import again…' : 'Import database…'}</button>
+        {g && !busy && <button className="btn" onClick={() => { app.setAirwayData(null); setMsg('Airway data removed from this browser.'); }}>Remove</button>}
+        <input ref={file} type="file" hidden onChange={async (e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (!f) return;
+          setBusy(true);
+          setMsg(`Opening ${f.name} (${(f.size / 1e6).toFixed(0)} MB)…`);
+          const t0 = performance.now();
+          try {
+            const data = await extractAirways(fileSource(f), f.name, setMsg);
+            app.setAirwayData(data);
+            setMsg(`Done in ${((performance.now() - t0) / 1000).toFixed(0)} s: ${(data.seg.length / 4).toLocaleString('en-US')} airway segments. "Airways" routes are ready on Dispatch.`);
+            if (app.inputs.routeMode === 'navaids') app.setInputs({ ...app.inputs, routeMode: 'airways' });
+          } catch (err) {
+            setMsg((err as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }} />
+      </div>
+      {msg && <div className="banner banner-info" style={{ marginTop: 12 }}>{msg}</div>}
+      <p className="muted">
+        Routes follow the airways but are not checked against ATC restrictions, airway levels or one-way rules beyond what the data marks.
+        Your aircraft&apos;s FMC uses its own navdata, which can be an older cycle: if it rejects an airway, edit the route under &quot;My own&quot;.
+        Re-import after MSFS updates its navdata.
       </p>
     </Section>
   );
