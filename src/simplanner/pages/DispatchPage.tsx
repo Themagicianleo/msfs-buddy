@@ -1,0 +1,175 @@
+import { useState } from 'react';
+import { AirportPicker } from '../components/AirportPicker';
+import { Field, NumberInput, TextInput } from '../components/ui';
+import { generateFlight } from '../generate';
+import type { SavedFlight } from '../lib/store';
+import { useApp } from '../state';
+
+/** SimBrief-style dispatch: fill in the flight, press Generate. */
+export function DispatchPage() {
+  const app = useApp();
+  const { inputs, setInputs, derived, profiles } = app;
+  const { profile, dep, arr, units: u } = derived;
+  const set = <K extends keyof typeof inputs>(k: K, v: (typeof inputs)[K]) => setInputs({ ...inputs, [k]: v });
+  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
+
+  const generate = async () => {
+    setBusy(true);
+    setErrors([]);
+    const res = await generateFlight(inputs, profile, app.index);
+    setBusy(false);
+    if (res.errors.length) {
+      setErrors(res.errors);
+      return;
+    }
+    setInputs(res.inputs);
+    const flight: SavedFlight = { id: Date.now().toString(36), savedAt: new Date().toISOString(), inputs: res.inputs };
+    app.update('flights', [flight, ...app.store.flights].slice(0, 100));
+    location.hash = '#ofp';
+  };
+
+  const loadFactor = (pct: number) => set('paxCount', Math.round((profile.capacity.maxPax * pct) / 100));
+  const rwyOptions = (a: typeof dep) => (a?.runways ?? []).map((r) => r.ident);
+
+  return (
+    <div className="dispatch">
+      {app.datasetError && <div className="banner banner-warn">{app.datasetError}</div>}
+      {!app.datasetLoading && !app.dataset && !app.datasetError && (
+        <div className="banner banner-warn">Airport data isn't available yet. You can still use airports you add under Airports.</div>
+      )}
+
+      <section className="section">
+        <div className="section-head"><h2>1 · Aircraft</h2></div>
+        <div className="form-grid">
+          <Field label="Aircraft" wide>
+            <select className="input" value={inputs.profileId} onChange={(e) => app.changeProfile(e.target.value)}>
+              {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}{p.verified ? '' : '  (placeholder values)'}</option>)}
+            </select>
+          </Field>
+          {profile.variants && (
+            <Field label="Engines">
+              <select className="input" value={inputs.variant ?? ''} onChange={(e) => set('variant', e.target.value || undefined)}>
+                {Object.keys(profile.variants).map((v) => <option key={v}>{v}</option>)}
+              </select>
+            </Field>
+          )}
+          <Field label="Flight number">
+            <TextInput value={inputs.flightNo} onChange={(v) => set('flightNo', v.trim())} upper maxLength={10} placeholder="CES5401" />
+          </Field>
+          <Field label="Units">
+            <select className="input" value={inputs.units ?? ''} onChange={(e) => app.changeUnits((e.target.value || undefined) as 'kg' | 'lb' | undefined)}>
+              <option value="">{profile.units} (aircraft)</option>
+              <option value="kg">kg</option>
+              <option value="lb">lb</option>
+            </select>
+          </Field>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head"><h2>2 · Where</h2></div>
+        <div className="od">
+          <AirportPicker label="From" value={inputs.dep} onChange={(v) => set('dep', v)} placeholder="ZUDC" />
+          <div className="od-arrow">→</div>
+          <AirportPicker label="To" value={inputs.arr} onChange={(v) => set('arr', v)} placeholder="ZUNZ" />
+        </div>
+
+        <div className="options">
+          <div className="option">
+            <span className="field-label">Route</span>
+            <div className="segmented">
+              {([['navaids', 'VOR to VOR'], ['direct', 'Direct'], ['manual', 'My own']] as const).map(([id, label]) => (
+                <button key={id} type="button" className={inputs.routeMode === id ? 'on' : ''} onClick={() => set('routeMode', id)}>{label}</button>
+              ))}
+            </div>
+            {inputs.routeMode === 'manual' ? (
+              <textarea className="input" value={inputs.route} onChange={(e) => set('route', e.target.value.toUpperCase())} spellCheck={false} placeholder="SID WPT1 W5 WPT2 STAR" />
+            ) : (
+              <span className="field-hint">
+                {inputs.routeMode === 'navaids'
+                  ? 'Built from VOR/NDB beacons near the direct track. Not an ATC airway route (no airway data). You can edit it afterwards with "My own".'
+                  : 'Straight great-circle line (DCT).'}
+              </span>
+            )}
+          </div>
+
+          <div className="option">
+            <label className="check"><input type="checkbox" checked={inputs.autoAlternate} onChange={(e) => set('autoAlternate', e.target.checked)} /> Pick the alternate for me</label>
+            {!inputs.autoAlternate && <AirportPicker label="Alternate" value={inputs.altn} onChange={(v) => set('altn', v)} />}
+            {inputs.autoAlternate && <span className="field-hint">Nearest airport to the arrival with a runway of at least {(profile.defaults.minRunwayFt ?? 6500).toLocaleString('en-US')} ft.</span>}
+          </div>
+
+          <div className="option">
+            <label className="check"><input type="checkbox" checked={inputs.autoRunways} onChange={(e) => set('autoRunways', e.target.checked)} /> Pick runways from the live wind</label>
+            {!inputs.autoRunways && (
+              <div className="form-grid">
+                <Field label="Departure runway">
+                  <select className="input" value={inputs.depRwy} onChange={(e) => set('depRwy', e.target.value)}>
+                    <option value="">—</option>
+                    {rwyOptions(dep).map((r) => <option key={r}>{r}</option>)}
+                  </select>
+                </Field>
+                <Field label="Arrival runway">
+                  <select className="input" value={inputs.arrRwy} onChange={(e) => set('arrRwy', e.target.value)}>
+                    <option value="">—</option>
+                    {rwyOptions(arr).map((r) => <option key={r}>{r}</option>)}
+                  </select>
+                </Field>
+              </div>
+            )}
+          </div>
+
+          <div className="option">
+            <label className="check"><input type="checkbox" checked={inputs.autoCruise} onChange={(e) => set('autoCruise', e.target.checked)} /> Pick the cruise level for me</label>
+            {!inputs.autoCruise && (
+              <Field label="Cruise level (FL)">
+                <NumberInput value={inputs.cruiseFl} onChange={(v) => set('cruiseFl', Math.round(v))} min={10} max={450} />
+              </Field>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head"><h2>3 · Load</h2></div>
+        <div className="form-grid">
+          <Field label="Passengers" hint={`of ${profile.capacity.maxPax} seats`}>
+            <NumberInput value={inputs.paxCount} onChange={(v) => set('paxCount', Math.round(v))} min={0} />
+          </Field>
+          <Field label="Quick fill">
+            <div className="row">
+              {[50, 75, 90, 100].map((p) => <button key={p} type="button" className="btn btn-small" onClick={() => loadFactor(p)}>{p}%</button>)}
+            </div>
+          </Field>
+          <Field label={`Cargo (${u})`}>
+            <NumberInput value={inputs.cargo} onChange={(v) => set('cargo', v)} min={0} />
+          </Field>
+          <Field label={`Weight per passenger (${u})`} hint="Including bags">
+            <NumberInput value={inputs.paxWeight} onChange={(v) => set('paxWeight', v)} min={0} />
+          </Field>
+        </div>
+
+        <details className="advanced">
+          <summary>Fuel policy and other settings</summary>
+          <div className="form-grid">
+            <Field label="Contingency %"><NumberInput value={inputs.contingencyPct} onChange={(v) => set('contingencyPct', v)} min={0} max={50} step={0.5} /></Field>
+            <Field label="Final reserve (min)"><NumberInput value={inputs.reserveMin} onChange={(v) => set('reserveMin', v)} min={0} max={240} /></Field>
+            <Field label={`Taxi fuel (${u})`}><NumberInput value={inputs.taxiFuel} onChange={(v) => set('taxiFuel', v)} min={0} /></Field>
+            <Field label={`Extra fuel (${u})`}><NumberInput value={inputs.extraFuel} onChange={(v) => set('extraFuel', v)} min={0} /></Field>
+            <Field label="Avg wind (kt)" hint="+ tail, − head"><NumberInput value={inputs.windKt} onChange={(v) => set('windKt', v)} min={-250} max={250} /></Field>
+            <Field label="Cost index"><NumberInput value={inputs.costIndex} onChange={(v) => set('costIndex', Math.round(v))} min={0} max={9999} /></Field>
+          </div>
+          <button type="button" className="btn btn-small" onClick={() => app.changeProfile(inputs.profileId)}>Reset to aircraft defaults</button>
+        </details>
+      </section>
+
+      {errors.length > 0 && <div className="banner banner-danger">{errors.map((e) => <div key={e}>{e}</div>)}</div>}
+      <div className="generate-bar">
+        <button className="btn btn-primary btn-big" onClick={generate} disabled={busy}>
+          {busy ? 'Generating…' : 'Generate flight'}
+        </button>
+      </div>
+    </div>
+  );
+}

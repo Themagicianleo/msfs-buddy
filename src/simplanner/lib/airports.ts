@@ -1,7 +1,10 @@
-// Airports and runways: the open OurAirports data set (imported into the
-// browser once) plus airports you add by hand. Your own entries always win,
-// so you can fix or add airports such as ZUDC or ZUNZ.
+// Airports, runways and radio navaids from the open OurAirports data set
+// (public domain). A GitHub Action downloads it into this repository
+// (public/data/), so the website ships it; nobody has to import anything.
+// Airports you add by hand always win, so you can fix or add airports such
+// as ZUDC or ZUNZ.
 
+import { distanceNm, type LatLon } from './geo';
 import type { NavDataProvider, NavFix } from './navdata';
 
 export interface Runway {
@@ -12,6 +15,8 @@ export interface Runway {
   surface?: string;
 }
 
+export type AirportSize = 'large' | 'medium' | 'small';
+
 export interface Airport {
   icao: string;
   name: string;
@@ -21,19 +26,32 @@ export interface Airport {
   runways: Runway[];
   country?: string;
   city?: string;
+  size?: AirportSize;
   source: 'custom' | 'ourairports';
 }
 
-/** Compact row as stored in IndexedDB: [icao, name, lat, lon, elevation, country, city, alias]. */
-export type AirportRow = [string, string, number, number, number | null, string, string, string];
+export interface Navaid extends LatLon {
+  ident: string;
+  name: string;
+  /** VOR, VOR-DME, VORTAC, TACAN, NDB, NDB-DME */
+  type: string;
+  /** OurAirports usage: HI, LO, BOTH, TERMINAL, RNAV or '' */
+  usage: string;
+}
+
+/** [icao, name, lat, lon, elevation, country, city, alias, size L/M/S] */
+export type AirportRow = [string, string, number, number, number | null, string, string, string, string?];
 /** [ident, lengthFt, headingTrue, surface] */
 export type RunwayRow = [string, number | null, number | null, string];
+/** [ident, name, type, lat, lon, usage] */
+export type NavaidRow = [string, string, string, number, number, string];
 
 export interface AirportDataset {
   importedAt: string;
   source: string;
   airports: AirportRow[];
   runways: Record<string, RunwayRow[]>;
+  navaids?: NavaidRow[];
 }
 
 /** RFC 4180 CSV parser (quoted fields, doubled quotes, newlines in quotes). */
@@ -76,24 +94,32 @@ function table(text: string): Record<string, string>[] {
   return rows.filter((r) => r.length > 1).map((r) => Object.fromEntries(header.map((h, i) => [h.trim(), r[i] ?? ''])));
 }
 
-const KEEP_TYPES = new Set(['large_airport', 'medium_airport', 'small_airport']);
+const SIZE: Record<string, string> = { large_airport: 'L', medium_airport: 'M', small_airport: 'S' };
+const SIZE_NAME: Record<string, AirportSize> = { L: 'large', M: 'medium', S: 'small' };
+const NAVAID_TYPES = new Set(['VOR', 'VOR-DME', 'VORTAC', 'TACAN', 'NDB', 'NDB-DME']);
 const num = (s: string) => (s.trim() === '' ? null : Number.isFinite(Number(s)) ? Number(s) : null);
+const round = (n: number, d: number) => Math.round(n * 10 ** d) / 10 ** d;
 
 /**
- * Convert OurAirports airports.csv + runways.csv into the compact dataset.
+ * Convert OurAirports airports.csv + runways.csv (+ navaids.csv) into the
+ * compact dataset. Large and medium airports are kept; small airports only
+ * when they have a 4-letter ICAO-style code (to keep the file small).
  * The ICAO code is taken from icao_code, else a 4-letter gps_code, else ident.
  */
-export function buildDataset(airportsCsv: string, runwaysCsv: string, source = 'OurAirports'): AirportDataset {
+export function buildDataset(airportsCsv: string, runwaysCsv: string, source = 'OurAirports', navaidsCsv = ''): AirportDataset {
   const airports: AirportRow[] = [];
   const keyByIdent = new Map<string, string>();
   for (const a of table(airportsCsv)) {
-    if (!KEEP_TYPES.has(a.type)) continue;
+    const size = SIZE[a.type];
+    if (!size) continue;
     const lat = Number(a.latitude_deg);
     const lon = Number(a.longitude_deg);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-    const icao = (a.icao_code || (/^[A-Z]{4}$/.test(a.gps_code) ? a.gps_code : '') || a.ident).toUpperCase();
+    const coded = a.icao_code || (/^[A-Z]{4}$/.test(a.gps_code) ? a.gps_code : '');
+    if (size === 'S' && !coded && !/^[A-Z]{4}$/.test(a.ident)) continue;
+    const icao = (coded || a.ident).toUpperCase();
     keyByIdent.set(a.ident, icao);
-    airports.push([icao, a.name, lat, lon, num(a.elevation_ft), a.iso_country ?? '', a.municipality ?? '', a.ident !== icao ? a.ident.toUpperCase() : '']);
+    airports.push([icao, a.name, round(lat, 5), round(lon, 5), num(a.elevation_ft), a.iso_country ?? '', a.municipality ?? '', a.ident !== icao ? a.ident.toUpperCase() : '', size]);
   }
   const runways: Record<string, RunwayRow[]> = {};
   for (const r of table(runwaysCsv)) {
@@ -102,33 +128,59 @@ export function buildDataset(airportsCsv: string, runwaysCsv: string, source = '
     if (!key) continue;
     const list = (runways[key] ??= []);
     const len = num(r.length_ft);
-    if (r.le_ident) list.push([r.le_ident.toUpperCase(), len, num(r.le_heading_degT), r.surface ?? '']);
-    if (r.he_ident) list.push([r.he_ident.toUpperCase(), len, num(r.he_heading_degT), r.surface ?? '']);
+    const hdg = (v: string) => (num(v) === null ? null : round(num(v)!, 1));
+    if (r.le_ident) list.push([r.le_ident.toUpperCase(), len, hdg(r.le_heading_degT), r.surface ?? '']);
+    if (r.he_ident) list.push([r.he_ident.toUpperCase(), len, hdg(r.he_heading_degT), r.surface ?? '']);
   }
-  return { importedAt: new Date().toISOString(), source, airports, runways };
+  const navaids: NavaidRow[] = [];
+  for (const n of navaidsCsv ? table(navaidsCsv) : []) {
+    if (!NAVAID_TYPES.has(n.type)) continue;
+    const lat = Number(n.latitude_deg);
+    const lon = Number(n.longitude_deg);
+    if (!n.ident || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    navaids.push([n.ident.toUpperCase(), n.name, n.type, round(lat, 5), round(lon, 5), (n.usageType ?? '').toUpperCase()]);
+  }
+  return { importedAt: new Date().toISOString(), source, airports, runways, navaids };
 }
 
-/** In-memory lookup over the imported dataset and your custom airports. */
+/** In-memory lookup over the dataset and your custom airports. */
 export class AirportIndex {
   private byIcao = new Map<string, Airport>();
   private custom = new Map<string, Airport>();
+  private navaidsByIdent = new Map<string, Navaid[]>();
+  readonly navaids: Navaid[] = [];
   readonly count: number;
 
   constructor(dataset: AirportDataset | null, custom: Airport[]) {
     for (const row of dataset?.airports ?? []) {
-      const [icao, name, lat, lon, elevationFt, country, city, alias] = row;
+      const [icao, name, lat, lon, elevationFt, country, city, alias, size] = row;
       const runways = (dataset!.runways[icao] ?? []).map(([ident, lengthFt, headingDeg, surface]) => ({ ident, lengthFt, headingDeg, surface }));
-      const apt: Airport = { icao, name, lat, lon, elevationFt, runways, country, city, source: 'ourairports' };
+      const apt: Airport = { icao, name, lat, lon, elevationFt, runways, country, city, size: size ? SIZE_NAME[size] : undefined, source: 'ourairports' };
       this.byIcao.set(icao, apt);
       if (alias && !this.byIcao.has(alias)) this.byIcao.set(alias, apt);
     }
     for (const a of custom) this.custom.set(a.icao.toUpperCase(), { ...a, source: 'custom' });
+    for (const [ident, name, type, lat, lon, usage] of dataset?.navaids ?? []) {
+      const n: Navaid = { ident, name, type, lat, lon, usage };
+      this.navaids.push(n);
+      const list = this.navaidsByIdent.get(ident);
+      if (list) list.push(n);
+      else this.navaidsByIdent.set(ident, [n]);
+    }
     this.count = dataset?.airports.length ?? 0;
   }
 
   get(icao: string): Airport | null {
     const k = icao.trim().toUpperCase();
     return this.custom.get(k) ?? this.byIcao.get(k) ?? null;
+  }
+
+  /** All airports (custom first), each once. */
+  all(): Airport[] {
+    const out = [...this.custom.values()];
+    const seen = new Set(this.custom.keys());
+    for (const [k, a] of this.byIcao) if (k === a.icao && !seen.has(k)) out.push(a);
+    return out;
   }
 
   search(q: string, limit = 25): Airport[] {
@@ -144,11 +196,27 @@ export class AirportIndex {
     };
     const exact = this.get(query);
     if (exact) push(exact);
-    for (const a of [...this.custom.values(), ...this.byIcao.values()]) {
-      if (out.length >= limit) break;
-      if (a.icao.startsWith(query) || a.name.toUpperCase().includes(query) || (a.city ?? '').toUpperCase().includes(query)) push(a);
+    // ICAO prefix matches first (big airports before small), then names and cities.
+    const rank = (a: Airport) => (a.source === 'custom' ? 0 : a.size === 'large' ? 1 : a.size === 'medium' ? 2 : 3);
+    const all = [...this.custom.values(), ...this.byIcao.values()];
+    all.filter((a) => a.icao.startsWith(query)).sort((a, b) => rank(a) - rank(b)).forEach(push);
+    if (out.length < limit) {
+      all
+        .filter((a) => a.name.toUpperCase().includes(query) || (a.city ?? '').toUpperCase().includes(query))
+        .sort((a, b) => rank(a) - rank(b))
+        .forEach(push);
     }
     return out;
+  }
+
+  /** Airports within `maxNm` of a point, nearest first. */
+  nearby(p: LatLon, maxNm: number, filter: (a: Airport) => boolean = () => true): { airport: Airport; distanceNm: number }[] {
+    const latSpan = maxNm / 60;
+    return this.all()
+      .filter((a) => Math.abs(a.lat - p.lat) <= latSpan && filter(a))
+      .map((a) => ({ airport: a, distanceNm: distanceNm(p, a) }))
+      .filter((x) => x.distanceNm <= maxNm)
+      .sort((a, b) => a.distanceNm - b.distanceNm);
   }
 
   toFix(a: Airport): NavFix {
@@ -166,9 +234,28 @@ export class AirportIndex {
       },
     };
   }
+
+  /** VOR/NDB beacons from OurAirports, by ident (idents repeat worldwide). */
+  navaidProvider(): NavDataProvider {
+    return {
+      id: 'navaids',
+      name: 'Navaids (OurAirports)',
+      findFix: (ident) =>
+        (this.navaidsByIdent.get(ident) ?? []).map((n) => ({
+          ident: n.ident,
+          name: `${n.name} ${n.type}`,
+          lat: n.lat,
+          lon: n.lon,
+          type: n.type.startsWith('NDB') ? 'ndb' : 'vor',
+          source: 'Navaids (OurAirports)',
+        })),
+    };
+  }
 }
 
+/** Where the GitHub Action downloads from (see scripts/build-airport-data.ts). */
 export const OURAIRPORTS_URLS = {
   airports: 'https://davidmegginson.github.io/ourairports-data/airports.csv',
   runways: 'https://davidmegginson.github.io/ourairports-data/runways.csv',
+  navaids: 'https://davidmegginson.github.io/ourairports-data/navaids.csv',
 };

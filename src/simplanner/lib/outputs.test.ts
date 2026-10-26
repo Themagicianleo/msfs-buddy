@@ -82,7 +82,7 @@ describe('FMC cheat sheets', () => {
     const profile = DEFAULT_PROFILES.find((p) => p.id === 'pmdg-737-800')!;
     const inputs: FlightInputs = {
       profileId: profile.id, cruiseFl: 350, paxCount: 150, cargo: 2000, paxWeight: 84, contingencyPct: 5, reserveMin: 30,
-      taxiFuel: 200, extraFuel: 0, windKt: 0, costIndex: 30, dep: 'zbaa', arr: 'rjtt', altn: 'rjaa', route: 'WPT1 W5 WPT2', depRwy: '36r', arrRwy: '', flightNo: '',
+      taxiFuel: 200, extraFuel: 0, windKt: 0, costIndex: 30, dep: 'zbaa', arr: 'rjtt', altn: 'rjaa', route: 'WPT1 W5 WPT2', depRwy: '36r', arrRwy: '', flightNo: '', routeMode: 'manual', autoCruise: false, autoAlternate: false, autoRunways: false,
     };
     const route = parseRoute(inputs.route, [customWaypointProvider([{ ident: 'WPT1', lat: 39.5, lon: 118 }, { ident: 'WPT2', lat: 37, lon: 126 }])]);
     const plan = computePlan(inputs, profile, 1100, 40);

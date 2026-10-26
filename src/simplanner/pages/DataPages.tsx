@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Field, NumberInput, Section, TextInput } from '../components/ui';
-import { buildDataset, OURAIRPORTS_URLS, type Airport, type Runway } from '../lib/airports';
+import type { Airport, Runway } from '../lib/airports';
 import { DEFAULT_TEMPLATES, PLACEHOLDERS } from '../lib/fmc';
-import { idbDelete, idbSet } from '../lib/idb';
 import { parseWaypointCsv, type CustomWaypoint } from '../lib/navdata';
 import { DEFAULT_PROFILES, validateProfile, type AircraftProfile } from '../lib/profiles';
 import { download, makeBackup, mergeBackup } from '../lib/store';
-import { DATASET_KEY, useApp } from '../state';
+import { useApp } from '../state';
 
 // ---------------- Airports ----------------
 
@@ -15,52 +14,9 @@ const blankAirport = (): Airport => ({ icao: '', name: '', lat: 0, lon: 0, eleva
 export function AirportsPage() {
   const app = useApp();
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState('');
-  const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Airport | null>(null);
-  const aptFile = useRef<HTMLInputElement>(null);
-  const rwyFile = useRef<HTMLInputElement>(null);
   const results = app.index.search(q);
-
-  const importTexts = async (airportsCsv: string, runwaysCsv: string, source: string) => {
-    setStatus('Processing…');
-    const ds = buildDataset(airportsCsv, runwaysCsv, source);
-    if (!ds.airports.length) throw new Error('No airports found in that file. Is it OurAirports airports.csv?');
-    await idbSet(DATASET_KEY, ds);
-    app.setDataset(ds);
-    setStatus(`Imported ${ds.airports.length.toLocaleString('en-US')} airports and runways for ${Object.keys(ds.runways).length.toLocaleString('en-US')} of them.`);
-  };
-
-  const downloadOA = async () => {
-    setBusy(true);
-    try {
-      setStatus('Downloading airports.csv and runways.csv from OurAirports (about 15 MB)…');
-      const [a, r] = await Promise.all([fetch(OURAIRPORTS_URLS.airports), fetch(OURAIRPORTS_URLS.runways)]);
-      if (!a.ok || !r.ok) throw new Error(`Download failed (HTTP ${a.status}/${r.status}).`);
-      await importTexts(await a.text(), await r.text(), 'OurAirports (download)');
-    } catch (e) {
-      setStatus(`${(e as Error).message} If downloading doesn't work, download the two CSV files yourself from ourairports.com/data and use "Import files".`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const importFiles = async () => {
-    const a = aptFile.current?.files?.[0];
-    const r = rwyFile.current?.files?.[0];
-    if (!a || !r) {
-      setStatus('Choose both airports.csv and runways.csv first.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await importTexts(await a.text(), await r.text(), `OurAirports (files ${a.name}, ${r.name})`);
-    } catch (e) {
-      setStatus((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const ds = app.dataset;
 
   const saveAirport = (a: Airport) => {
     const icao = a.icao.trim().toUpperCase();
@@ -71,31 +27,19 @@ export function AirportsPage() {
 
   return (
     <div>
-      <Section title="Airport database (OurAirports)">
+      <Section title="Airport data">
         <p style={{ marginTop: 0 }}>
-          {app.datasetLoading
+          {app.datasetLoading && !ds
             ? 'Loading…'
-            : app.dataset
-              ? `${app.dataset.airports.length.toLocaleString('en-US')} airports imported ${new Date(app.dataset.importedAt).toLocaleDateString()} from ${app.dataset.source}.`
-              : 'Not imported yet. Your own airports below still work without it.'}
+            : ds
+              ? `${ds.airports.length.toLocaleString('en-US')} airports and ${(ds.navaids?.length ?? 0).toLocaleString('en-US')} VOR/NDB navaids (${ds.source}).`
+              : 'Not available yet.'}
         </p>
-        <p className="muted">
-          OurAirports is free, open data (public domain), stored only in this browser. It is not navdata: no procedures, and runway
-          headings are true.
+        {app.datasetError && <div className="banner banner-warn">{app.datasetError}</div>}
+        <p className="muted" style={{ marginBottom: 0 }}>
+          Comes with the website: a monthly GitHub Action copies the free OurAirports data (public domain) into this site&apos;s GitHub
+          repository. It is not navdata: no airways or procedures, and runway headings are true. Add or correct airports below; yours always win.
         </p>
-        <div className="row">
-          <button className="btn btn-primary" onClick={downloadOA} disabled={busy}>Download from OurAirports</button>
-          <span className="muted">or</span>
-          <label className="btn">airports.csv <input ref={aptFile} type="file" accept=".csv" hidden /></label>
-          <label className="btn">runways.csv <input ref={rwyFile} type="file" accept=".csv" hidden /></label>
-          <button className="btn" onClick={importFiles} disabled={busy}>Import files</button>
-          {app.dataset && (
-            <button className="btn btn-danger" disabled={busy} onClick={async () => { await idbDelete(DATASET_KEY); app.setDataset(null); setStatus('Removed.'); }}>
-              Remove
-            </button>
-          )}
-        </div>
-        {status && <p className="banner banner-info" style={{ marginTop: 12 }}>{status}</p>}
       </Section>
 
       {editing && <AirportEditor airport={editing} onSave={saveAirport} onCancel={() => setEditing(null)} />}
@@ -333,7 +277,7 @@ export function AircraftPage() {
 export function FlightsPage() {
   const app = useApp();
   const flights = app.store.flights;
-  if (!flights.length) return <Section title="Saved flights"><p className="muted">No saved flights. Use “Save flight” on the Plan page.</p></Section>;
+  if (!flights.length) return <Section title="Saved flights"><p className="muted">No flights yet. Each flight you generate on the Dispatch page is saved here.</p></Section>;
   return (
     <Section title="Saved flights">
       {flights.map((f) => {
@@ -346,7 +290,8 @@ export function FlightsPage() {
               <div className="mono muted" style={{ wordBreak: 'break-word' }}>{f.inputs.route}</div>
             </div>
             <div className="row">
-              <button className="btn btn-primary btn-small" onClick={() => { app.setInputs(f.inputs); location.hash = '#plan'; }}>Open</button>
+              <button className="btn btn-primary btn-small" onClick={() => { app.setInputs(f.inputs); location.hash = '#ofp'; }}>Open</button>
+              <button className="btn btn-small" onClick={() => { app.setInputs(f.inputs); location.hash = '#dispatch'; }}>Edit</button>
               <button className="btn btn-small btn-danger" onClick={() => confirm('Delete this flight?') && app.update('flights', flights.filter((x) => x.id !== f.id))}>Delete</button>
             </div>
           </div>
@@ -388,13 +333,13 @@ export function SettingsPage() {
           }} />
         </div>
         {msg && <p className="banner banner-info" style={{ marginTop: 12 }}>{msg}</p>}
-        <p className="muted">The OurAirports database is not in the backup; import it again on the new device.</p>
+        <p className="muted">Airport data comes with the website, so it isn't in the backup.</p>
       </Section>
 
       <Section title="Using it on other devices">
         <p style={{ marginTop: 0 }}>
           SimPlanner is a website, so any phone, tablet or PC can open it, but each device keeps its own data. To move one flight, use
-          “Copy share link” on the Plan page and open the link on the other device; it brings the custom airports and waypoints that flight
+          “Copy share link” on the OFP page and open the link on the other device; it brings the custom airports and waypoints that flight
           uses. To move everything, use the backup file.
         </p>
         <p>

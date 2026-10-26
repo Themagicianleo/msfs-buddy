@@ -4,7 +4,7 @@ import { formatTaf } from '../../lib/metar';
 import { fmtHm, fmtWeight } from '../lib/units';
 import { age, getWeather, type WeatherResult } from '../lib/weather';
 import { useApp } from '../state';
-import { LegsTable } from './PlanPage';
+import { LegsTable } from './OfpPage';
 import type { Airport } from '../lib/airports';
 
 function RunwayList({ a }: { a: Airport | null }) {
@@ -17,22 +17,45 @@ function RunwayList({ a }: { a: Airport | null }) {
   );
 }
 
-export function BriefingPage() {
-  const { inputs, derived } = useApp();
-  const { plan, route, profile, dep, arr, altn, units: u } = derived;
+/** METAR/TAF for departure, arrival and alternate, fetched when shown. */
+export function WeatherSection() {
+  const { inputs } = useApp();
   const [wx, setWx] = useState<WeatherResult | null>(null);
   const [loading, setLoading] = useState(false);
   const ids = [inputs.dep, inputs.arr, inputs.altn].filter(Boolean);
+  const key = ids.join(',');
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    setWx(await getWeather(ids));
+    setWx(await getWeather(key.split(',').filter(Boolean)));
     setLoading(false);
-  }, [ids.join(',')]);
+  }, [key]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  return (
+    <Section title="Weather" actions={<button className="btn btn-small no-print" onClick={refresh} disabled={loading}>{loading ? 'Fetching…' : 'Refresh'}</button>}>
+      {wx?.message && <div className="banner banner-warn">{wx.message}</div>}
+      {ids.map((id) => {
+        const s = wx?.stations[id.toUpperCase()];
+        return (
+          <div key={id} style={{ marginBottom: 10 }}>
+            <b>{id.toUpperCase()}</b>
+            {s ? <span className="muted"> · fetched {age(s.fetchedAt)} from {s.source}</span> : null}
+            <div className="metar">{s?.metar || (loading ? 'Loading…' : 'No METAR available.')}</div>
+            {s?.taf && <div className="metar">{formatTaf(s.taf)}</div>}
+          </div>
+        );
+      })}
+    </Section>
+  );
+}
+
+export function BriefingPage() {
+  const { inputs, derived } = useApp();
+  const { plan, route, profile, dep, arr, altn, units: u } = derived;
 
   const fullRoute = [inputs.dep, route.fmcRoute, inputs.arr].filter(Boolean).join(' ');
   const title = `${inputs.flightNo ? inputs.flightNo + ' · ' : ''}${inputs.dep || '????'} → ${inputs.arr || '????'}`;
@@ -42,7 +65,6 @@ export function BriefingPage() {
       <div className="row no-print" style={{ marginBottom: 14 }}>
         <button className="btn btn-primary" onClick={() => window.print()}>Print / save as PDF</button>
         <CopyButton text={fullRoute} label="Copy route" />
-        <button className="btn" onClick={refresh} disabled={loading}>{loading ? 'Fetching weather…' : 'Refresh weather'}</button>
       </div>
 
       <Section title={title}>
@@ -102,20 +124,7 @@ export function BriefingPage() {
         </Section>
       </div>
 
-      <Section title="Weather">
-        {wx?.message && <div className="banner banner-warn">{wx.message}</div>}
-        {ids.map((id) => {
-          const s = wx?.stations[id.toUpperCase()];
-          return (
-            <div key={id} style={{ marginBottom: 10 }}>
-              <b>{id.toUpperCase()}</b>
-              {s ? <span className="muted"> · fetched {age(s.fetchedAt)} from {s.source}</span> : null}
-              <div className="metar">{s?.metar || 'No METAR available.'}</div>
-              {s?.taf && <div className="metar">{formatTaf(s.taf)}</div>}
-            </div>
-          );
-        })}
-      </Section>
+      <WeatherSection />
 
       <Section title="Runways (from airport data)">
         <Kv rows={[[inputs.dep || 'Departure', <RunwayList key="d" a={dep} />], [inputs.arr || 'Arrival', <RunwayList key="a" a={arr} />]]} />
@@ -144,23 +153,6 @@ export function BriefingPage() {
         </ol>
       </Section>
       <p className="print-only">{'SimPlanner briefing. Simulation use only. Fuel and weights are estimates, verify with the aircraft’s own performance tools.'}</p>
-    </div>
-  );
-}
-
-export function FmcPage() {
-  const { derived, inputs } = useApp();
-  return (
-    <div>
-      <EstimateBanner />
-      <div className="banner banner-warn">
-        Every page name and button label marked [UNVERIFIED] has not been checked against the {derived.profile.name} manual. Edit the template
-        (Aircraft page) once you have confirmed it.
-      </div>
-      <Section title={`${derived.profile.name}: what to key in`} actions={<><CopyButton text={derived.fmcText} label="Copy sheet" /><button className="btn" onClick={() => window.print()}>Print</button></>}>
-        {!inputs.dep || !inputs.arr ? <p className="muted">Fill in the flight on the Plan page first.</p> : null}
-        <pre className="sheet">{derived.fmcText}</pre>
-      </Section>
     </div>
   );
 }

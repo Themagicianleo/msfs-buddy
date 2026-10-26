@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { AppProvider, useApp } from './state';
-import { PlanPage } from './pages/PlanPage';
-import { BriefingPage, FmcPage } from './pages/BriefingPage';
+import { DispatchPage } from './pages/DispatchPage';
+import { OfpPage } from './pages/OfpPage';
 import { AircraftPage, AirportsPage, FlightsPage, SettingsPage, WaypointsPage } from './pages/DataPages';
 import { decodeShare } from './lib/store';
 import type { SharedFlight } from './lib/snapshot';
 
 const PAGES = [
-  ['plan', 'Plan'],
-  ['briefing', 'Briefing'],
-  ['fmc', 'FMC sheet'],
+  ['dispatch', 'Dispatch'],
+  ['ofp', 'OFP'],
   ['flights', 'Flights'],
   ['airports', 'Airports'],
   ['waypoints', 'Waypoints'],
@@ -21,7 +20,10 @@ type PageId = (typeof PAGES)[number][0];
 function useHashPage(): PageId {
   const read = () => {
     const h = location.hash.replace(/^#/, '').split('=')[0];
-    return (PAGES.some(([id]) => id === h) ? h : 'plan') as PageId;
+    // Old links (#plan, #briefing, #fmc) land on the new pages.
+    const alias: Record<string, PageId> = { plan: 'dispatch', briefing: 'ofp', fmc: 'ofp' };
+    const id = alias[h] ?? h;
+    return (PAGES.some(([p]) => p === id) ? id : 'dispatch') as PageId;
   };
   const [page, setPage] = useState<PageId>(read);
   useEffect(() => {
@@ -42,7 +44,7 @@ function ShareImport() {
   useEffect(() => {
     const m = location.hash.match(/^#import=(.+)$/);
     if (!m) return;
-    history.replaceState(null, '', location.pathname + '#plan');
+    history.replaceState(null, '', location.pathname + '#ofp');
     try {
       const shared = decodeShare<SharedFlight>(m[1]);
       if (shared.app !== 'simplanner-flight') throw new Error();
@@ -56,7 +58,7 @@ function ShareImport() {
       const airports = [...app.store.airports.filter((a) => !addedIcaos.has(a.icao.toUpperCase())), ...added];
       const have = new Set(app.store.waypoints.map((w) => `${w.ident}@${w.lat},${w.lon}`));
       const waypoints = [...app.store.waypoints, ...shared.waypoints.filter((w) => !have.has(`${w.ident}@${w.lat},${w.lon}`))];
-      app.replaceStore({ ...app.store, airports, waypoints, draft: shared.inputs });
+      app.replaceStore({ ...app.store, airports, waypoints, draft: { ...shared.inputs, routeMode: 'manual' } });
       setMsg(`Loaded shared flight ${shared.inputs.dep} → ${shared.inputs.arr} (${added.length} airports and ${shared.waypoints.length} waypoints added).`);
     } catch {
       setMsg('That share link could not be read. It may have been cut off when copying.');
@@ -81,9 +83,8 @@ function Shell() {
       </header>
       <main>
         <ShareImport />
-        {page === 'plan' && <PlanPage />}
-        {page === 'briefing' && <BriefingPage />}
-        {page === 'fmc' && <FmcPage />}
+        {page === 'dispatch' && <DispatchPage />}
+        {page === 'ofp' && <OfpPage />}
         {page === 'flights' && <FlightsPage />}
         {page === 'airports' && <AirportsPage />}
         {page === 'waypoints' && <WaypointsPage />}

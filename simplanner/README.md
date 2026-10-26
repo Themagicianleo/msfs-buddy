@@ -14,23 +14,58 @@ server, no telemetry. Your data never leaves the device unless you export it.
 > aircraft's own performance tools. Aircraft numbers ship as PLACEHOLDERS and
 > FMC page names are UNVERIFIED until you check them.
 
-## Quick start
+## Quick start (works like SimBrief's dispatch)
 
-1. **Airports:** on the *Airports* page press **Download from OurAirports**
-   (about 15 MB, once per device). If that fails, download `airports.csv` and
-   `runways.csv` from https://ourairports.com/data/ and use **Import files**.
-   Add any missing or wrong airports under **My airports** (ICAO, lat/lon,
-   elevation, runway idents, length, heading); yours always take priority.
-2. **Waypoints:** add the fixes your route uses on the *Waypoints* page, one at
-   a time or pasted as CSV (`IDENT,LAT,LON,NOTE`, decimal degrees).
-3. **Aircraft:** on the *Aircraft* page, check every number in your profile
-   against the aircraft's documentation, then set `"verified": true`.
-4. **Plan:** fill in departure, arrival, alternate, aircraft, route, cruise
-   level, passengers, cargo, average passenger weight, contingency %, final
-   reserve time and taxi fuel. Results update as you type.
-5. **Outputs:** *Briefing* (print or save as PDF), *FMC sheet*, **Copy route**,
-   **MSFS .pln**, **Little Navmap** (.lnmpln), **Copy share link** and
-   **Copy kiosk link**.
+1. Open **Dispatch**. Pick the aircraft, type **From** and **To** (ICAO, name
+   or city; suggestions appear as you type), and set passengers and cargo.
+2. Press **Generate flight**. By default SimPlanner picks:
+   * **Route:** VOR-to-VOR (see below), or *Direct*, or *My own* to type it.
+   * **Cruise level:** about FL100 + 0.75 × distance, capped at the
+     aircraft's normal cruise level, using the east odd / west even rule.
+   * **Alternate:** the nearest large/medium airport to the arrival with a
+     runway at least the profile's `minRunwayFt` long.
+   * **Runways:** into the live METAR wind; the longest if there's no wind data.
+   Untick any of these to choose yourself.
+3. The **OFP** opens: summary, navlog, fuel & weights, weather, FMC sheet
+   and a printable briefing, plus **MSFS .pln**, **Little Navmap**,
+   **Copy route**, **share link** and **kiosk link**. Every generated flight
+   is saved under **Flights**.
+
+Before trusting the numbers, check your aircraft profile on the **Aircraft**
+page and set `"verified": true`.
+
+## How routes are generated
+
+SimBrief builds airway routes from licensed AIRAC navdata. SimPlanner ships
+none, so **VOR to VOR** uses the free OurAirports list of VOR, VOR-DME,
+VORTAC, TACAN and NDB beacons:
+
+* only beacons within 50 nm of the great-circle track count, ignoring the
+  first and last 30 nm (SID/STAR area);
+* it steps along the track choosing the beacon that makes the most progress
+  in the next 60–220 nm while staying close to the line. High-altitude VORs
+  beat low/terminal ones, and NDBs are used only when no VOR is in reach;
+* over long empty stretches (oceans) it flies direct to the next beacon.
+
+The result looks like `ZBAA AAA DCT BBB DCT CCC RJTT`. It is flyable in the
+FMC (type the beacon idents; pick the right one if the FMC offers several) but
+**it is not an ATC airway route**, and it has no SID or STAR. Add those in the
+FMC. Tuning values are `DEFAULT_ROUTE_OPTIONS` in
+`src/simplanner/lib/autoplan.ts`.
+
+## Airport data
+
+The website ships the airport data: `public/data/ourairports.json`, built
+from OurAirports (public domain): large and medium airports, small ones with
+an ICAO-style code, their runways, and VOR/NDB navaids.
+
+The **Update airport data** GitHub Action
+(`.github/workflows/update-airport-data.yml`) refreshes it on the 1st of each
+month, commits it to this repository if anything changed, and redeploys the
+site. Run it by hand from the repo's *Actions* tab
+(**Update airport data → Run workflow**). The browser keeps a copy so the
+planner also works offline. Airports you add on the *Airports* page are
+stored in your browser and always take priority.
 
 ## Route strings
 
@@ -64,7 +99,7 @@ SimPlanner ships no Navigraph/AIRAC data. Two ways to add your own:
 ## The fuel/time model
 
 Simple on purpose. Every step is shown with your numbers under *How these
-numbers were worked out* on the Plan page.
+numbers were worked out* on the OFP (Fuel & weights tab).
 
 ```
 climb time      = cruise altitude ÷ average climb rate
@@ -87,7 +122,7 @@ If the route is too short for the cruise level, climb and descent are scaled
 down to fit and you get a warning. Weight doesn't change burn in this model.
 
 Checks against the profile: MZFW, MTOW, MLW, max fuel, max passengers, max
-cargo. Anything over is shown in red at the top of the Plan page, the briefing
+cargo. Anything over is shown in red at the top of the OFP, the briefing
 and the kiosk.
 
 All tuning values live in the aircraft profile (`performance`, `reserves`,
@@ -96,7 +131,7 @@ All tuning values live in the aircraft profile (`performance`, `reserves`,
 ## Units
 
 Each profile has `"units": "kg"` or `"lb"`; all its weights and burns are in
-that unit. You can override per flight (*Weight units* on the Plan page); the
+that unit. You can override per flight (*Units* on the Dispatch page); the
 profile is converted, and the load inputs are converted when you switch.
 
 ## FMC cheat sheets
@@ -157,12 +192,18 @@ depends on the aircraft. If one can, the kiosk page is the best candidate
   opened in Little Navmap. Little Navmap can also open the .pln.
 * **PMDG/iFly/Fenix/FSLabs route import formats:** not produced. Type the route
   into the FMC using the cheat sheet.
+* **Generated routes:** the beacon list comes from OurAirports, not the AIRAC
+  cycle in MSFS 2024 or your aircraft's FMC. A beacon may be renamed,
+  decommissioned or missing there. Check each ident in the FMC.
+* **Cruise levels:** the east/west rule uses true course. China, Mongolia and
+  some other states use metric flight levels; pick the metric level nearest
+  the suggestion.
 * **Live weather in the browser:** the NOAA API (with VATSIM as a fallback) is
   called directly from the page. I couldn't test that from the build
   environment, so if your browser blocks it you'll see the last saved reports
   or "No METAR available".
-* **OurAirports download in the browser:** fetched straight from the OurAirports
-  GitHub mirror; untested from here. The file import is the fallback.
+* **Airport data update:** the GitHub Action downloads from the OurAirports
+  GitHub mirror and refuses to publish a suspiciously small file.
 * **Kiosk in sim EFB browsers:** see above.
 
 ## Development

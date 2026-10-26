@@ -20,7 +20,8 @@
     "paxWeight": 84,
     "costIndex": 30,
     "cruiseFl": 360,
-    "taxiMinutes": 12
+    "taxiMinutes": 12,
+    "minRunwayFt": 6500
   },
   "performance": {
     "cruiseTasKt": 450,

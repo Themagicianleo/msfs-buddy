@@ -40,7 +40,7 @@ export interface AircraftProfile {
   placeholderNotice: string;
   weights: { oew: number; mtow: number; mlw: number; mzfw: number; maxFuel: number };
   capacity: { maxPax: number; maxCargo: number };
-  defaults: { paxWeight: number; costIndex: number; cruiseFl: number; taxiMinutes: number };
+  defaults: { paxWeight: number; costIndex: number; cruiseFl: number; taxiMinutes: number; minRunwayFt?: number };
   performance: Performance;
   reserves: { contingencyPct: number; minContingencyMin: number; finalReserveMin: number; alternateCruiseFl: number };
   vspeedNotes: string;

@@ -16,6 +16,14 @@ export interface FlightInputs extends PlanInputs {
   depRwy: string;
   arrRwy: string;
   flightNo: string;
+  /** How Generate flight builds the route. */
+  routeMode: 'navaids' | 'direct' | 'manual';
+  autoCruise: boolean;
+  autoAlternate: boolean;
+  autoRunways: boolean;
+  /** Set by Generate flight: how the runways were chosen. */
+  runwayNotes?: string;
+  routeNote?: string;
 }
 
 export interface SavedFlight {

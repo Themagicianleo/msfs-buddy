@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AirportIndex, type Airport, type AirportDataset } from './lib/airports';
 import { DEFAULT_TEMPLATES, renderTemplate, templateVars } from './lib/fmc';
 import { distanceNm } from './lib/geo';
-import { idbGet } from './lib/idb';
+import { idbGet, idbSet } from './lib/idb';
 import { customWaypointProvider, type NavFix } from './lib/navdata';
 import { computePlan, defaultTaxiFuel, type PlanResult } from './lib/planning';
 import { DEFAULT_PROFILES, type AircraftProfile } from './lib/profiles';
@@ -37,8 +37,19 @@ export function defaultInputs(p: AircraftProfile): FlightInputs {
     depRwy: '',
     arrRwy: '',
     flightNo: '',
+    routeMode: 'navaids',
+    autoCruise: true,
+    autoAlternate: true,
+    autoRunways: true,
   };
 }
+
+/** Fill in fields that flights saved by older versions don't have. */
+export function withDefaults(i: Partial<FlightInputs>, p: AircraftProfile): FlightInputs {
+  return { ...defaultInputs(p), ...i };
+}
+
+export const minRunway = (p: AircraftProfile) => p.defaults.minRunwayFt ?? 6500;
 
 export interface Derived {
   profile: AircraftProfile;
@@ -57,7 +68,7 @@ interface Ctx {
   replaceStore: (next: StoreData) => void;
   dataset: AirportDataset | null;
   datasetLoading: boolean;
-  setDataset: (d: AirportDataset | null) => void;
+  datasetError: string;
   index: AirportIndex;
   profiles: AircraftProfile[];
   templates: Record<string, string>;
@@ -81,11 +92,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dataset, setDataset] = useState<AirportDataset | null>(null);
   const [datasetLoading, setDatasetLoading] = useState(true);
 
+  const [datasetError, setDatasetError] = useState('');
+
+  // Airport data ships with the website (public/data, kept up to date by a
+  // GitHub Action). A copy is kept in the browser so it also works offline.
   useEffect(() => {
-    idbGet<AirportDataset>(DATASET_KEY)
-      .then((d) => setDataset(d ?? null))
-      .catch(() => setDataset(null))
-      .finally(() => setDatasetLoading(false));
+    let cancelled = false;
+    const cached = idbGet<AirportDataset>(DATASET_KEY).catch(() => undefined);
+    cached.then((d) => {
+      if (!cancelled && d) setDataset(d);
+    });
+    fetch(`${import.meta.env.BASE_URL}data/ourairports.json`, { cache: 'no-cache' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<AirportDataset>;
+      })
+      .then(async (d) => {
+        if (cancelled) return;
+        setDataset(d);
+        setDatasetError('');
+        const old = await cached;
+        if (old?.importedAt !== d.importedAt) await idbSet(DATASET_KEY, d).catch(() => undefined);
+      })
+      .catch(async (e: Error) => {
+        if (cancelled) return;
+        setDatasetError((await cached) ? `Using the copy saved in this browser (couldn't reach the site's data: ${e.message}).` : `Airport data couldn't be loaded (${e.message}). Your own airports still work.`);
+      })
+      .finally(() => !cancelled && setDatasetLoading(false));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const update = useCallback(<K extends keyof StoreData>(key: K, value: StoreData[K]) => {
@@ -107,7 +143,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const templates = useMemo(() => ({ ...DEFAULT_TEMPLATES, ...store.templates }), [store.templates]);
   const index = useMemo(() => new AirportIndex(dataset, store.airports), [dataset, store.airports]);
 
-  const inputs = store.draft ?? defaultInputs(profiles[0]);
+  // New flights start on the PMDG 737-800 if it's there, else the first profile.
+  const firstProfile = profiles.find((p) => p.id === 'pmdg-737-800') ?? profiles[0];
+  const inputs = store.draft ? withDefaults(store.draft, profiles.find((p) => p.id === store.draft!.profileId) ?? firstProfile) : defaultInputs(firstProfile);
   const setInputs = useCallback((i: FlightInputs) => update('draft', i), [update]);
 
   const profileFor = (id: string) => profiles.find((p) => p.id === id) ?? profiles[0];
@@ -116,7 +154,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const p = profileFor(id);
     const d = defaultInputs(p);
     // Keep the flight itself; reset the aircraft-specific numbers to the new profile.
-    setInputs({ ...d, dep: inputs.dep, arr: inputs.arr, altn: inputs.altn, route: inputs.route, depRwy: inputs.depRwy, arrRwy: inputs.arrRwy, flightNo: inputs.flightNo, paxCount: Math.min(inputs.paxCount, p.capacity.maxPax) });
+    setInputs({
+      ...d,
+      dep: inputs.dep, arr: inputs.arr, altn: inputs.altn, route: inputs.route, depRwy: inputs.depRwy, arrRwy: inputs.arrRwy, flightNo: inputs.flightNo,
+      routeMode: inputs.routeMode, autoCruise: inputs.autoCruise, autoAlternate: inputs.autoAlternate, autoRunways: inputs.autoRunways,
+      paxCount: Math.min(inputs.paxCount, p.capacity.maxPax),
+    });
   };
 
   const changeUnits = (u: WeightUnit | undefined) => {
@@ -131,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const dep = inputs.dep ? index.get(inputs.dep) : null;
     const arr = inputs.arr ? index.get(inputs.arr) : null;
     const altn = inputs.altn ? index.get(inputs.altn) : null;
-    const providers = [customWaypointProvider(store.waypoints), index.provider()];
+    const providers = [customWaypointProvider(store.waypoints), index.provider(), index.navaidProvider()];
     const fix = (a: Airport | null): NavFix | null => (a ? index.toFix(a) : null);
     const route = parseRoute(inputs.route, providers, fix(dep), fix(arr));
     const altnNm = arr && altn ? distanceNm(arr, altn) : 0;
@@ -142,7 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [inputs, index, store.waypoints, profiles, templates]);
 
   const value: Ctx = {
-    store, update, replaceStore, dataset, datasetLoading, setDataset, index, profiles, templates,
+    store, update, replaceStore, dataset, datasetLoading, datasetError, index, profiles, templates,
     inputs, setInputs, changeProfile, changeUnits, derived,
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
