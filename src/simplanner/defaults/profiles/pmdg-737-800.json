@@ -1,0 +1,47 @@
+{
+  "id": "pmdg-737-800",
+  "name": "PMDG 737-800",
+  "fmcTemplate": "pmdg-737",
+  "units": "kg",
+  "verified": false,
+  "placeholderNotice": "PLACEHOLDER VALUES. These are round numbers of roughly the right size for the type, NOT taken from any manual or the aircraft's performance data. Check every number against the aircraft's documentation or its in-sim performance tool, then set \"verified\" to true.",
+  "weights": {
+    "oew": 41000,
+    "mtow": 79000,
+    "mlw": 66000,
+    "mzfw": 62000,
+    "maxFuel": 20800
+  },
+  "capacity": {
+    "maxPax": 189,
+    "maxCargo": 4000
+  },
+  "defaults": {
+    "paxWeight": 84,
+    "costIndex": 30,
+    "cruiseFl": 350,
+    "taxiMinutes": 12
+  },
+  "performance": {
+    "cruiseTasKt": 450,
+    "climbRateFpm": 1800,
+    "climbSpeedKt": 330,
+    "descentNmPer1000ft": 3,
+    "descentSpeedKt": 320,
+    "burnPerHour": {
+      "taxi": 600,
+      "climb": 4500,
+      "cruise": 2500,
+      "descent": 1000,
+      "holding": 2300
+    }
+  },
+  "reserves": {
+    "contingencyPct": 5,
+    "minContingencyMin": 5,
+    "finalReserveMin": 30,
+    "alternateCruiseFl": 200
+  },
+  "vspeedNotes": "PLACEHOLDER NOTE: take V1/VR/V2, flaps, assumed temperature and derate from the aircraft's own performance tool (EFB / takeoff calculator), never from SimPlanner.",
+  "notes": "PMDG lets you pick kg or lb in the aircraft options; set 'units' to match your setup."
+}

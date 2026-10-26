@@ -1,0 +1,47 @@
+{
+  "id": "fslabs-a321",
+  "name": "FSLabs A321",
+  "fmcTemplate": "airbus-a321",
+  "units": "kg",
+  "verified": false,
+  "placeholderNotice": "PLACEHOLDER VALUES. These are round numbers of roughly the right size for the type, NOT taken from any manual or the aircraft's performance data. Check every number against the aircraft's documentation or its in-sim performance tool, then set \"verified\" to true.",
+  "weights": {
+    "oew": 48500,
+    "mtow": 93500,
+    "mlw": 77800,
+    "mzfw": 73800,
+    "maxFuel": 18600
+  },
+  "capacity": {
+    "maxPax": 220,
+    "maxCargo": 4500
+  },
+  "defaults": {
+    "paxWeight": 84,
+    "costIndex": 30,
+    "cruiseFl": 350,
+    "taxiMinutes": 12
+  },
+  "performance": {
+    "cruiseTasKt": 450,
+    "climbRateFpm": 1600,
+    "climbSpeedKt": 330,
+    "descentNmPer1000ft": 3,
+    "descentSpeedKt": 320,
+    "burnPerHour": {
+      "taxi": 650,
+      "climb": 5000,
+      "cruise": 2800,
+      "descent": 1000,
+      "holding": 2500
+    }
+  },
+  "reserves": {
+    "contingencyPct": 5,
+    "minContingencyMin": 5,
+    "finalReserveMin": 30,
+    "alternateCruiseFl": 200
+  },
+  "vspeedNotes": "PLACEHOLDER NOTE: take V1/VR/V2, FLEX temperature and CONF from the aircraft's own takeoff performance tool (EFB), never from SimPlanner.",
+  "notes": "Check which engine/sharklet variant you have loaded; figures differ between them."
+}

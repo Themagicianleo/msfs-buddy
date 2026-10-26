@@ -1,0 +1,73 @@
+{
+  "id": "pmdg-777-200er",
+  "name": "PMDG 777-200ER",
+  "fmcTemplate": "pmdg-777",
+  "units": "kg",
+  "verified": false,
+  "placeholderNotice": "PLACEHOLDER VALUES. These are round numbers of roughly the right size for the type, NOT taken from any manual or the aircraft's performance data. Check every number against the aircraft's documentation or its in-sim performance tool, then set \"verified\" to true.",
+  "weights": {
+    "oew": 140000,
+    "mtow": 297000,
+    "mlw": 213000,
+    "mzfw": 196000,
+    "maxFuel": 137000
+  },
+  "capacity": {
+    "maxPax": 300,
+    "maxCargo": 20000
+  },
+  "defaults": {
+    "paxWeight": 84,
+    "costIndex": 60,
+    "cruiseFl": 350,
+    "taxiMinutes": 15
+  },
+  "performance": {
+    "cruiseTasKt": 485,
+    "climbRateFpm": 1500,
+    "climbSpeedKt": 350,
+    "descentNmPer1000ft": 3,
+    "descentSpeedKt": 330,
+    "burnPerHour": {
+      "taxi": 1500,
+      "climb": 12000,
+      "cruise": 7000,
+      "descent": 2500,
+      "holding": 6000
+    }
+  },
+  "reserves": {
+    "contingencyPct": 5,
+    "minContingencyMin": 5,
+    "finalReserveMin": 30,
+    "alternateCruiseFl": 220
+  },
+  "vspeedNotes": "PLACEHOLDER NOTE: take V1/VR/V2, flaps, assumed temperature and derate from the aircraft's own performance tool (EFB / takeoff calculator), never from SimPlanner.",
+  "notes": "Three engine options exist (PW4090, GE90-94B, Trent 895). Pick the variant you fly; each has its own PLACEHOLDER burn figures below (currently identical, so edit them).",
+  "variants": {
+    "GE90-94B": {
+      "notes": "PLACEHOLDER: same as base until you edit it.",
+      "performance": {
+        "burnPerHour": {
+          "cruise": 7000
+        }
+      }
+    },
+    "PW4090": {
+      "notes": "PLACEHOLDER: same as base until you edit it.",
+      "performance": {
+        "burnPerHour": {
+          "cruise": 7000
+        }
+      }
+    },
+    "Trent 895": {
+      "notes": "PLACEHOLDER: same as base until you edit it.",
+      "performance": {
+        "burnPerHour": {
+          "cruise": 7000
+        }
+      }
+    }
+  }
+}

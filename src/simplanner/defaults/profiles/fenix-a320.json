@@ -1,0 +1,47 @@
+{
+  "id": "fenix-a320",
+  "name": "Fenix A320",
+  "fmcTemplate": "airbus-a320",
+  "units": "kg",
+  "verified": false,
+  "placeholderNotice": "PLACEHOLDER VALUES. These are round numbers of roughly the right size for the type, NOT taken from any manual or the aircraft's performance data. Check every number against the aircraft's documentation or its in-sim performance tool, then set \"verified\" to true.",
+  "weights": {
+    "oew": 42500,
+    "mtow": 78000,
+    "mlw": 66000,
+    "mzfw": 62500,
+    "maxFuel": 18700
+  },
+  "capacity": {
+    "maxPax": 180,
+    "maxCargo": 3500
+  },
+  "defaults": {
+    "paxWeight": 84,
+    "costIndex": 30,
+    "cruiseFl": 360,
+    "taxiMinutes": 12
+  },
+  "performance": {
+    "cruiseTasKt": 450,
+    "climbRateFpm": 1800,
+    "climbSpeedKt": 330,
+    "descentNmPer1000ft": 3,
+    "descentSpeedKt": 320,
+    "burnPerHour": {
+      "taxi": 600,
+      "climb": 4200,
+      "cruise": 2400,
+      "descent": 900,
+      "holding": 2200
+    }
+  },
+  "reserves": {
+    "contingencyPct": 5,
+    "minContingencyMin": 5,
+    "finalReserveMin": 30,
+    "alternateCruiseFl": 200
+  },
+  "vspeedNotes": "PLACEHOLDER NOTE: take V1/VR/V2, FLEX temperature and CONF from the aircraft's own takeoff performance tool (EFB), never from SimPlanner.",
+  "notes": "Fenix uses kg in its EFB by default. Check the engine option you have loaded."
+}

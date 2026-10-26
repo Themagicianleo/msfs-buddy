@@ -1,0 +1,47 @@
+{
+  "id": "ifly-737-max8",
+  "name": "iFly 737 MAX 8",
+  "fmcTemplate": "ifly-737max",
+  "units": "kg",
+  "verified": false,
+  "placeholderNotice": "PLACEHOLDER VALUES. These are round numbers of roughly the right size for the type, NOT taken from any manual or the aircraft's performance data. Check every number against the aircraft's documentation or its in-sim performance tool, then set \"verified\" to true.",
+  "weights": {
+    "oew": 45000,
+    "mtow": 82000,
+    "mlw": 69000,
+    "mzfw": 66000,
+    "maxFuel": 20700
+  },
+  "capacity": {
+    "maxPax": 189,
+    "maxCargo": 4000
+  },
+  "defaults": {
+    "paxWeight": 84,
+    "costIndex": 30,
+    "cruiseFl": 360,
+    "taxiMinutes": 12
+  },
+  "performance": {
+    "cruiseTasKt": 450,
+    "climbRateFpm": 1800,
+    "climbSpeedKt": 330,
+    "descentNmPer1000ft": 3,
+    "descentSpeedKt": 320,
+    "burnPerHour": {
+      "taxi": 550,
+      "climb": 4200,
+      "cruise": 2200,
+      "descent": 900,
+      "holding": 2100
+    }
+  },
+  "reserves": {
+    "contingencyPct": 5,
+    "minContingencyMin": 5,
+    "finalReserveMin": 30,
+    "alternateCruiseFl": 200
+  },
+  "vspeedNotes": "PLACEHOLDER NOTE: take V1/VR/V2, flaps, assumed temperature and derate from the aircraft's own performance tool (EFB / takeoff calculator), never from SimPlanner.",
+  "notes": "Set 'units' to match the iFly unit setting you use."
+}
