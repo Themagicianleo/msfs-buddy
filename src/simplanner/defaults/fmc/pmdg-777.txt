@@ -1,0 +1,46 @@
+FMC CHEAT SHEET: {aircraft}, {variant} (Boeing 777 CDU)
+{dep} to {arr}, alternate {altn}. Weights in {units}.
+
+!! Every page name and button label marked [UNVERIFIED] has NOT been checked
+!! against the PMDG 777 documentation. Check each one in the FMC/CDU section of
+!! the manual, then edit this template and remove the tag.
+!! The field labels listed under each page (ZFW, RESERVES, BLOCK, ...) are
+!! [UNVERIFIED] too.
+!! Fuel and weights are estimates, verify with the aircraft's own performance tools.
+
+1. IDENT
+   [UNVERIFIED] Page: IDENT (via INIT REF)
+   - Check the engine type shown matches the variant you planned: {variant}.
+   - Check the navigation database is current.
+
+2. POSITION
+   [UNVERIFIED] Page: POS INIT
+   - REF AIRPORT: {dep}; set the IRS position.
+
+3. ROUTE
+   [UNVERIFIED] Page: RTE, page 1
+   - ORIGIN: {dep}   DEST: {arr}   RUNWAY: {dep_rwy}   FLT NO: {flight_no}
+   [UNVERIFIED] Page: RTE, page 2
+   - Enter: {route_fmc}
+   [UNVERIFIED] Page: DEP/ARR: select the SID; select the STAR and approach later.
+   [UNVERIFIED] Buttons: ACTIVATE, then EXEC
+
+4. PERFORMANCE
+   [UNVERIFIED] Page: PERF INIT
+   - ZFW: {zfw_t}   (thousands of {units})
+   - RESERVES: {reserves_total_t}   (alternate {alternate_fuel_t} + final reserve {final_reserve_t})
+   - COST INDEX: {cost_index}
+   - CRZ ALT: {cruise_fl}
+   - Fuel on board should read about {block_fuel_t}.
+   [UNVERIFIED] Button: EXEC
+
+5. THRUST / TAKEOFF
+   [UNVERIFIED] Page: THRUST LIM
+   - Select the takeoff rating / derate and assumed temperature from the
+     aircraft's own performance tool.
+   [UNVERIFIED] Page: TAKEOFF REF
+   - FLAPS, V1 / VR / V2 and CG: from the aircraft's own performance tool,
+     NOT from SimPlanner.
+
+Plan summary: {distance} nm, trip {trip_fuel} {units}, block {block_fuel} {units},
+TOW {tow} {units}, LW {lw} {units}, trip time {trip_time}.

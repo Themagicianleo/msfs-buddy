@@ -1,0 +1,46 @@
+MCDU CHEAT SHEET: {aircraft} (Airbus A320-family MCDU)
+{dep} to {arr}, alternate {altn}. Weights in {units}.
+
+!! Every page name and button label marked [UNVERIFIED] has NOT been checked
+!! against the Fenix A320 documentation. Check each one in the manual, then
+!! edit this template and remove the tag.
+!! The field labels listed under each page (ZFW, RESERVES, BLOCK, ...) are
+!! [UNVERIFIED] too.
+!! Fuel and weights are estimates, verify with the aircraft's own performance tools.
+
+1. STATUS
+   [UNVERIFIED] Page: DATA > STATUS (A/C STATUS)
+   - Check the navigation database is current.
+
+2. INITIALISATION
+   [UNVERIFIED] Page: INIT (INIT A)
+   - FROM/TO: {dep}/{arr}
+   - ALTN: {altn}
+   - FLT NBR: {flight_no}
+   - COST INDEX: {cost_index}
+   - CRZ FL: {cruise_fl}
+   - Align the IRS.
+
+3. FLIGHT PLAN
+   [UNVERIFIED] Page: F-PLN
+   - Select the departure runway {dep_rwy} and SID (lateral revision on {dep}).
+   - Enter the route, airways via the AIRWAYS page, waypoints directly:
+     {route_fmc}
+   - Clear any discontinuities.
+
+4. FUEL / WEIGHTS
+   [UNVERIFIED] Page: INIT, page 2 (INIT B / FUEL PRED)
+   - ZFW: {zfw_t}   (tonnes if {units} is KG)
+   - ZFWCG: from the loadsheet / aircraft EFB
+   - BLOCK: {block_fuel_t}
+   - RTE RSV %: {contingency_pct}
+   - FINAL TIME: {final_reserve_min} min  (about {final_reserve} {units})
+   - ALTN fuel should come out near {alternate_fuel}.
+
+5. TAKEOFF
+   [UNVERIFIED] Page: PERF > TAKE OFF
+   - V1 / VR / V2, FLEX TO TEMP, FLAPS/THS: from the aircraft's own EFB takeoff
+     performance tool, NOT from SimPlanner.
+
+Plan summary: {distance} nm, trip {trip_fuel} {units}, block {block_fuel} {units},
+TOW {tow} {units}, LW {lw} {units}, trip time {trip_time}.
