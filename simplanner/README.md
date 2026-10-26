@@ -82,6 +82,25 @@ via RKZ (Rikaze), but many routes still come out **Direct** (and flights
 under 220 nm are always one leg). For a beacon route there, add the real
 fixes under *Waypoints* (from your charts) and choose **My own**.
 
+**CAAC published routes (China):** under *Settings → Published routes*,
+import CAAC's route list CSVs (*International Flights from / to Mainland of
+China* and *Regional Flight Routes*, one set per AIRAC cycle). For those
+airport pairs, Generate flight uses the published route (real airways, e.g.
+ZUUU→RKSI `GURET W233 AGULU … DONVO G597 AGAVO`) instead of VOR to VOR, and
+Dispatch lets you pick between the published options. Limits:
+
+* the files stay in your browser only (IndexedDB). They are CAAC
+  publications, so they are not in this repo, the site or the backup;
+* domestic flights are not in these lists, so ZUDC/ZUNZ still use VOR to VOR;
+* international routes stop at the Chinese border fix; the foreign part is
+  flown direct, so add it yourself;
+* the lists have no coordinates. Fixes not in the open beacon data are left
+  out of the distance (add them under *Waypoints* for an exact figure); the
+  aircraft's FMC navdata has them;
+* the *Overflying* list is not used (it joins border points, not airports);
+* what the letter suffix on some route codes (e.g. `-01R`) means is not
+  explained in the files: **UNVERIFIED**, check before using those.
+
 The result looks like `ZBAA AAA DCT BBB DCT CCC RJTT`. It is flyable in the
 FMC (type the beacon idents; pick the right one if the FMC offers several) but
 **it is not an ATC airway route**, and it has no SID or STAR. Add those in the

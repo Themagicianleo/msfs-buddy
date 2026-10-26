@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Field, NumberInput, Section, TextInput } from '../components/ui';
 import type { Airport, Runway } from '../lib/airports';
+import { addLists, kindLabel, parseCaacRoutes, type RouteList } from '../lib/caac';
 import { DEFAULT_TEMPLATES, PLACEHOLDERS } from '../lib/fmc';
 import { parseWaypointCsv, type CustomWaypoint } from '../lib/navdata';
 import { DEFAULT_PROFILES, validateProfile, type AircraftProfile } from '../lib/profiles';
@@ -336,6 +337,8 @@ export function SettingsPage() {
         <p className="muted">Airport data comes with the website, so it isn't in the backup.</p>
       </Section>
 
+      <PublishedRoutesSection />
+
       <Section title="Using it on other devices">
         <p style={{ marginTop: 0 }}>
           SimPlanner is a website, so any phone, tablet or PC can open it, but each device keeps its own data. To move one flight, use
@@ -357,5 +360,57 @@ export function SettingsPage() {
         </ul>
       </Section>
     </div>
+  );
+}
+
+function PublishedRoutesSection() {
+  const app = useApp();
+  const lib = app.routeLibrary;
+  const [msg, setMsg] = useState<string[]>([]);
+  const file = useRef<HTMLInputElement>(null);
+  return (
+    <Section title="Published routes (CAAC)">
+      <p style={{ marginTop: 0 }}>
+        Import CAAC&apos;s flight route lists (the <b>International Flights from / to Mainland of China</b> and <b>Regional Flight Routes</b>{' '}
+        CSV files). Generate flight then uses the published route for those airport pairs instead of building one VOR to VOR. The files stay in
+        this browser only; they are never uploaded and are not in the backup. Domestic flights inside China are not in these lists.
+      </p>
+      {lib && lib.lists.length > 0 && (
+        <ul>
+          {lib.lists.map((l) => (
+            <li key={l.kind}>
+              {kindLabel(l.kind)}: {l.routes.length} routes{l.cycle ? `, cycle ${l.cycle}` : ''}{l.effective ? `, effective ${l.effective}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="row">
+        <button className="btn btn-primary" onClick={() => file.current?.click()}>Import CSV files…</button>
+        {lib && <button className="btn" onClick={() => { app.setRouteLibrary(null); setMsg(['Published routes removed from this browser.']); }}>Remove</button>}
+        <input ref={file} type="file" accept=".csv,text/csv" multiple hidden onChange={async (e) => {
+          const files = [...(e.target.files ?? [])];
+          e.target.value = '';
+          const lists: RouteList[] = [];
+          const out: string[] = [];
+          for (const f of files) {
+            try {
+              const l = parseCaacRoutes(await f.text());
+              lists.push(l);
+              out.push(`${f.name}: ${l.routes.length} routes (${kindLabel(l.kind)}).`);
+            } catch (err) {
+              out.push(`${f.name}: ${(err as Error).message}`);
+            }
+          }
+          if (lists.length) app.setRouteLibrary(addLists(lib, lists));
+          setMsg(out);
+        }} />
+      </div>
+      {msg.length > 0 && <div className="banner banner-info" style={{ marginTop: 12 }}>{msg.map((m) => <div key={m}>{m}</div>)}</div>}
+      <p className="muted">
+        CAAC republishes these every AIRAC cycle (28 days); import the new files when the cycle changes. International routes only cover the part
+        inside China. The lists have no coordinates, so fixes that aren&apos;t in the open beacon data are left out of the distance; add them under
+        Waypoints for an exact distance.
+      </p>
+    </Section>
   );
 }

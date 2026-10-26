@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AirportPicker } from '../components/AirportPicker';
 import { Field, NumberInput, TextInput } from '../components/ui';
 import { generateFlight } from '../generate';
+import { findPublishedRoutes } from '../lib/caac';
 import type { SavedFlight } from '../lib/store';
 import { useApp } from '../state';
 
@@ -17,7 +18,7 @@ export function DispatchPage() {
   const generate = async () => {
     setBusy(true);
     setErrors([]);
-    const res = await generateFlight(inputs, profile, app.index);
+    const res = await generateFlight(inputs, profile, app.index, undefined, undefined, app.routeLibrary);
     setBusy(false);
     if (res.errors.length) {
       setErrors(res.errors);
@@ -30,6 +31,7 @@ export function DispatchPage() {
   };
 
   const loadFactor = (pct: number) => set('paxCount', Math.round((profile.capacity.maxPax * pct) / 100));
+  const published = findPublishedRoutes(app.routeLibrary, inputs.dep, inputs.arr);
   const rwyOptions = (a: typeof dep) => (a?.runways ?? []).map((r) => r.ident);
 
   return (
@@ -83,12 +85,22 @@ export function DispatchPage() {
                 <button key={id} type="button" className={inputs.routeMode === id ? 'on' : ''} onClick={() => set('routeMode', id)}>{label}</button>
               ))}
             </div>
+            {inputs.routeMode === 'navaids' && published.length > 0 && (
+              <Field label="CAAC published route" hint="From the route lists you imported under Settings">
+                <select className="input" value={inputs.publishedRoute === 'off' ? 'off' : published.some((p) => p.code === inputs.publishedRoute) ? inputs.publishedRoute : published[0].code} onChange={(e) => set('publishedRoute', e.target.value)}>
+                  {published.map((p) => <option key={p.code} value={p.code}>{p.code}: {p.route.length > 60 ? `${p.route.slice(0, 60)}…` : p.route}</option>)}
+                  <option value="off">Don&apos;t use; build VOR to VOR</option>
+                </select>
+              </Field>
+            )}
             {inputs.routeMode === 'manual' ? (
               <textarea className="input" value={inputs.route} onChange={(e) => set('route', e.target.value.toUpperCase())} spellCheck={false} placeholder="SID WPT1 W5 WPT2 STAR" />
             ) : (
               <span className="field-hint">
                 {inputs.routeMode === 'navaids'
-                  ? 'Built from VOR/NDB beacons near the direct track. Not an ATC airway route (no airway data). You can edit it afterwards with "My own".'
+                  ? published.length && inputs.publishedRoute !== 'off'
+                    ? 'Uses the CAAC published route above (airways and fixes as filed). You can edit it afterwards with "My own".'
+                    : 'Built from VOR/NDB beacons near the direct track. Not an ATC airway route (no airway data). You can edit it afterwards with "My own".'
                   : 'Straight great-circle line (DCT).'}
               </span>
             )}

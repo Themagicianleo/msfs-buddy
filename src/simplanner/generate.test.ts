@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AirportIndex, type AirportDataset } from './lib/airports';
+import { addLists, parseCaacRoutes } from './lib/caac';
 import { DEFAULT_PROFILES } from './lib/profiles';
 import { generateFlight } from './generate';
 import { defaultInputs } from './state';
@@ -56,6 +57,17 @@ describe('generateFlight', () => {
     expect(r.inputs.cruiseFl).toBe(290);
     expect(r.inputs.altn).toBe('ZUUU');
     expect(r.inputs.depRwy).toBe('15');
+  });
+
+  it('uses a CAAC published route when one is imported for the pair', async () => {
+    const lib = addLists(null, [parseCaacRoutes('Flight Routes for Regional Flight Routes Nr2610 (EFF202609301600UTC),\nRoute Code,Fly along,\nZUDC-ZUNZ-01,AAA W1 BBB,\nZUDC-ZUNZ-02,BBB,\n')]);
+    const wx = async () => ({ stations: {} });
+    const r = await generateFlight(base, profile, index, wx, Math.random, lib);
+    expect(r.inputs.route).toBe('AAA W1 BBB');
+    expect(r.inputs.routeNote).toMatch(/ZUDC-ZUNZ-01 \(cycle 2610\).*other published option: ZUDC-ZUNZ-02/);
+    expect((await generateFlight({ ...base, publishedRoute: 'ZUDC-ZUNZ-02' }, profile, index, wx, Math.random, lib)).inputs.route).toBe('BBB');
+    expect((await generateFlight({ ...base, publishedRoute: 'off' }, profile, index, wx, Math.random, lib)).inputs.routeNote).toMatch(/VOR-to-VOR/);
+    expect((await generateFlight({ ...base, routeMode: 'direct' }, profile, index, wx, Math.random, lib)).inputs.route).toBe('DCT');
   });
 
   it('explains missing airports', async () => {

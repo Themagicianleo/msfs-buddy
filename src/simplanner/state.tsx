@@ -5,7 +5,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AirportIndex, type Airport, type AirportDataset } from './lib/airports';
 import { DEFAULT_TEMPLATES, renderTemplate, templateVars } from './lib/fmc';
 import { distanceNm } from './lib/geo';
-import { idbGet, idbSet } from './lib/idb';
+import { ROUTE_LIBRARY_KEY, type RouteLibrary } from './lib/caac';
+import { idbDelete, idbGet, idbSet } from './lib/idb';
 import { customWaypointProvider, type NavFix } from './lib/navdata';
 import { computePlan, defaultTaxiFuel, type PlanResult } from './lib/planning';
 import { DEFAULT_PROFILES, type AircraftProfile } from './lib/profiles';
@@ -70,6 +71,9 @@ interface Ctx {
   dataset: AirportDataset | null;
   datasetLoading: boolean;
   datasetError: string;
+  /** Your imported CAAC route lists (this browser only). */
+  routeLibrary: RouteLibrary | null;
+  setRouteLibrary: (lib: RouteLibrary | null) => void;
   index: AirportIndex;
   profiles: AircraftProfile[];
   templates: Record<string, string>;
@@ -94,6 +98,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [datasetLoading, setDatasetLoading] = useState(true);
 
   const [datasetError, setDatasetError] = useState('');
+  const [routeLibrary, setLibraryState] = useState<RouteLibrary | null>(null);
+
+  useEffect(() => {
+    idbGet<RouteLibrary>(ROUTE_LIBRARY_KEY).then((l) => l && setLibraryState(l)).catch(() => undefined);
+  }, []);
+
+  const setRouteLibrary = useCallback((lib: RouteLibrary | null) => {
+    setLibraryState(lib);
+    (lib ? idbSet(ROUTE_LIBRARY_KEY, lib) : idbDelete(ROUTE_LIBRARY_KEY)).catch(() => undefined);
+  }, []);
 
   // Airport data ships with the website (public/data, kept up to date by a
   // GitHub Action). A copy is kept in the browser so it also works offline.
@@ -158,7 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setInputs({
       ...d,
       dep: inputs.dep, arr: inputs.arr, altn: inputs.altn, route: inputs.route, depRwy: inputs.depRwy, arrRwy: inputs.arrRwy, flightNo: inputs.flightNo,
-      routeMode: inputs.routeMode, autoCruise: inputs.autoCruise, autoAlternate: inputs.autoAlternate, autoRunways: inputs.autoRunways, loadMode: inputs.loadMode,
+      routeMode: inputs.routeMode, autoCruise: inputs.autoCruise, autoAlternate: inputs.autoAlternate, autoRunways: inputs.autoRunways, loadMode: inputs.loadMode, publishedRoute: inputs.publishedRoute,
       paxCount: Math.min(inputs.paxCount, p.capacity.maxPax),
     });
   };
@@ -198,7 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [inputs, index, store.waypoints, profiles, templates]);
 
   const value: Ctx = {
-    store, update, replaceStore, dataset, datasetLoading, datasetError, index, profiles, templates,
+    store, update, replaceStore, dataset, datasetLoading, datasetError, routeLibrary, setRouteLibrary, index, profiles, templates,
     inputs, setInputs, changeProfile, changeUnits, derived,
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

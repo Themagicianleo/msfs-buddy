@@ -27,6 +27,8 @@ export interface FlightInputs extends PlanInputs {
   /** Set by Generate flight: how the runways were chosen. */
   runwayNotes?: string;
   routeNote?: string;
+  /** Which CAAC published route to use: a route code, '' for the first one, 'off' to ignore them. */
+  publishedRoute?: string;
 }
 
 export interface SavedFlight {

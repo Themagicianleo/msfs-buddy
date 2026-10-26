@@ -6,10 +6,12 @@
 import { parseMetar } from '../lib/metar';
 import type { AirportIndex } from './lib/airports';
 import { generateRoute, minimumCruiseFl, pickRunway, suggestAlternates, suggestCruiseFl } from './lib/autoplan';
+import { describePublished, findPublishedRoutes, type RouteLibrary } from './lib/caac';
 import { describeLoad, fitPayload, randomPayload, type Rng } from './lib/payload';
 import { distanceNm, initialCourseTrue } from './lib/geo';
 import type { AircraftProfile } from './lib/profiles';
 import type { FlightInputs } from './lib/store';
+import { parseRoute } from './lib/route';
 import { getWeather } from './lib/weather';
 
 export interface GenerateResult {
@@ -26,6 +28,7 @@ export async function generateFlight(
   index: AirportIndex,
   weather: WeatherFn = getWeather,
   rng: Rng = Math.random,
+  library: RouteLibrary | null = null,
 ): Promise<GenerateResult> {
   const errors: string[] = [];
   const notes: string[] = [];
@@ -43,7 +46,15 @@ export async function generateFlight(
 
   // Estimated route length, for the cruise level and payload limits.
   let routeNm = distanceNm(dep, arr) * 1.05;
-  if (inputs.routeMode !== 'manual') {
+  const published = inputs.routeMode === 'navaids' && inputs.publishedRoute !== 'off' ? findPublishedRoutes(library, dep.icao, arr.icao) : [];
+  const chosen = published.find((p) => p.code === inputs.publishedRoute) ?? published[0];
+  if (chosen) {
+    const cycle = library?.lists.find((l) => l.kind === chosen.kind)?.cycle ?? '';
+    next.route = chosen.route;
+    next.routeNote = `${describePublished(chosen, cycle, dep.icao, arr.icao)}${published.length > 1 ? ` ${published.length - 1} other published option${published.length > 2 ? 's' : ''}: ${published.filter((p) => p !== chosen).map((p) => p.code).join(', ')}.` : ''} Fixes missing from the open data are left out of the distance; your FMC knows them.`;
+    notes.push(`Route: ${next.routeNote}`);
+    routeNm = Math.max(routeNm, parseRoute(chosen.route, [index.provider(), index.navaidProvider()], index.toFix(dep), index.toFix(arr)).totalNm);
+  } else if (inputs.routeMode !== 'manual') {
     const r = generateRoute(dep, arr, index.navaids, inputs.routeMode);
     next.route = r.route;
     next.routeNote = r.note;
