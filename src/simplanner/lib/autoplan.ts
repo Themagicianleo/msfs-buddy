@@ -128,13 +128,32 @@ export function longestRunway(a: Airport): number {
   return a.runways.reduce((m, r) => Math.max(m, r.lengthFt ?? 0), 0);
 }
 
-/** Airports near the arrival with a runway long enough, nearest first. */
+/**
+ * Alternates for the arrival: airports with scheduled airline service (so no
+ * military bases or private fields) and a long enough runway, in the same
+ * country as the arrival first, then nearest first. Your own airports count
+ * as suitable.
+ */
 export function suggestAlternates(index: AirportIndex, arr: Airport, minRunwayFt: number, count = 5, maxNm = 300): AlternateSuggestion[] {
+  const suitable = (a: Airport) =>
+    a.icao !== arr.icao && (a.source === 'custom' || ((a.size === 'large' || a.size === 'medium') && a.scheduled !== false));
+  const sameCountry = (a: Airport) => !arr.country || !a.country || a.country === arr.country;
   return index
-    .nearby(arr, maxNm, (a) => a.icao !== arr.icao && (a.source === 'custom' || a.size === 'large' || a.size === 'medium'))
+    .nearby(arr, maxNm, suitable)
     .map((x) => ({ airport: x.airport, distanceNm: x.distanceNm, longestRunwayFt: longestRunway(x.airport) }))
     .filter((x) => x.distanceNm >= 10 && x.longestRunwayFt >= minRunwayFt)
+    .sort((a, b) => Number(!sameCountry(a.airport)) - Number(!sameCountry(b.airport)) || a.distanceNm - b.distanceNm)
     .slice(0, count);
+}
+
+/**
+ * Runway heading: the data's heading if present, else from the runway number
+ * (16 → 160°, a magnetic figure ±5°). Many OurAirports runways have no heading.
+ */
+function heading(r: Runway): number | null {
+  if (r.headingDeg !== null) return r.headingDeg;
+  const m = r.ident.match(/^(\d{1,2})[LCR]?$/);
+  return m && +m[1] >= 1 && +m[1] <= 36 ? +m[1] * 10 : null;
 }
 
 export interface RunwayPick {
@@ -153,11 +172,12 @@ export function pickRunway(a: Airport, wind: { dir: number | null; speed: number
   const long = all.filter((r) => (r.lengthFt ?? 0) >= minLengthFt);
   const pool = long.length ? long : all;
   if (wind && wind.dir !== null && wind.speed >= 3) {
-    const withHdg = pool.filter((r) => r.headingDeg !== null);
+    const withHdg = pool.filter((r) => heading(r) !== null);
     if (withHdg.length) {
-      const head = (r: Runway) => wind.speed * Math.cos(rad(wind.dir! - r.headingDeg!));
+      const head = (r: Runway) => wind.speed * Math.cos(rad(wind.dir! - heading(r)!));
       const best = withHdg.reduce((x, y) => (head(y) > head(x) + 0.5 || (Math.abs(head(y) - head(x)) <= 0.5 && (y.lengthFt ?? 0) > (x.lengthFt ?? 0)) ? y : x));
-      return { runway: best, reason: `into the wind (${String(wind.dir).padStart(3, '0')}/${wind.speed} kt, headwind ${Math.round(head(best))} kt)` };
+      const approx = best.headingDeg === null ? ', heading taken from the runway number' : '';
+      return { runway: best, reason: `into the wind (${String(wind.dir).padStart(3, '0')}/${wind.speed} kt, headwind ${Math.round(head(best))} kt${approx})` };
     }
   }
   const longest = pool.reduce((x, y) => ((y.lengthFt ?? 0) > (x.lengthFt ?? 0) ? y : x));

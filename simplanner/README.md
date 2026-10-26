@@ -22,9 +22,13 @@ server, no telemetry. Your data never leaves the device unless you export it.
    * **Route:** VOR-to-VOR (see below), or *Direct*, or *My own* to type it.
    * **Cruise level:** about FL100 + 0.75 × distance, capped at the
      aircraft's normal cruise level, using the east odd / west even rule.
-   * **Alternate:** the nearest large/medium airport to the arrival with a
-     runway at least the profile's `minRunwayFt` long.
-   * **Runways:** into the live METAR wind; the longest if there's no wind data.
+   * **Alternate:** the nearest airport with scheduled airline service and a
+     runway at least the profile's `minRunwayFt` long, in the arrival's
+     country first (no military bases, no cross-border picks when a domestic
+     one exists).
+   * **Runways:** into the live METAR wind; the longest if there's no wind
+     data. Where OurAirports has no runway heading, the runway number is used
+     (16 → about 160°).
    Untick any of these to choose yourself.
 3. The **OFP** opens: summary, navlog, fuel & weights, weather, FMC sheet
    and a printable briefing, plus **MSFS .pln**, **Little Navmap**,

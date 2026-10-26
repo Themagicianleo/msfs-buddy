@@ -27,6 +27,8 @@ export interface Airport {
   country?: string;
   city?: string;
   size?: AirportSize;
+  /** OurAirports scheduled_service: has airline flights (undefined in older data). */
+  scheduled?: boolean;
   source: 'custom' | 'ourairports';
 }
 
@@ -39,8 +41,8 @@ export interface Navaid extends LatLon {
   usage: string;
 }
 
-/** [icao, name, lat, lon, elevation, country, city, alias, size L/M/S] */
-export type AirportRow = [string, string, number, number, number | null, string, string, string, string?];
+/** [icao, name, lat, lon, elevation, country, city, alias, size L/M/S, scheduled 1/0] */
+export type AirportRow = [string, string, number, number, number | null, string, string, string, string?, number?];
 /** [ident, lengthFt, headingTrue, surface] */
 export type RunwayRow = [string, number | null, number | null, string];
 /** [ident, name, type, lat, lon, usage] */
@@ -119,7 +121,7 @@ export function buildDataset(airportsCsv: string, runwaysCsv: string, source = '
     if (size === 'S' && !coded && !/^[A-Z]{4}$/.test(a.ident)) continue;
     const icao = (coded || a.ident).toUpperCase();
     keyByIdent.set(a.ident, icao);
-    airports.push([icao, a.name, round(lat, 5), round(lon, 5), num(a.elevation_ft), a.iso_country ?? '', a.municipality ?? '', a.ident !== icao ? a.ident.toUpperCase() : '', size]);
+    airports.push([icao, a.name, round(lat, 5), round(lon, 5), num(a.elevation_ft), a.iso_country ?? '', a.municipality ?? '', a.ident !== icao ? a.ident.toUpperCase() : '', size, a.scheduled_service === 'yes' ? 1 : 0]);
   }
   const runways: Record<string, RunwayRow[]> = {};
   for (const r of table(runwaysCsv)) {
@@ -153,9 +155,9 @@ export class AirportIndex {
 
   constructor(dataset: AirportDataset | null, custom: Airport[]) {
     for (const row of dataset?.airports ?? []) {
-      const [icao, name, lat, lon, elevationFt, country, city, alias, size] = row;
+      const [icao, name, lat, lon, elevationFt, country, city, alias, size, scheduled] = row;
       const runways = (dataset!.runways[icao] ?? []).map(([ident, lengthFt, headingDeg, surface]) => ({ ident, lengthFt, headingDeg, surface }));
-      const apt: Airport = { icao, name, lat, lon, elevationFt, runways, country, city, size: size ? SIZE_NAME[size] : undefined, source: 'ourairports' };
+      const apt: Airport = { icao, name, lat, lon, elevationFt, runways, country, city, size: size ? SIZE_NAME[size] : undefined, scheduled: scheduled === undefined ? undefined : scheduled === 1, source: 'ourairports' };
       this.byIcao.set(icao, apt);
       if (alias && !this.byIcao.has(alias)) this.byIcao.set(alias, apt);
     }
