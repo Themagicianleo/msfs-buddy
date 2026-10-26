@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimPlanner kiosk</title>
+<!--
+  SimPlanner kiosk: a read-only, large-text briefing for a phone, tablet or a
+  sim aircraft's EFB browser (EXPERIMENTAL: untested in any sim).
+  Deliberately self-contained: no external files, no modern JavaScript
+  (ES5 only), no storage. The whole briefing is carried in the link (#d=...),
+  so nothing has to be saved on this device and no server sees the data.
+-->
+<style>
+  html, body { margin: 0; background: #000; color: #fff; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 22px; line-height: 1.4; padding: 12px; }
+  h1 { font-size: 1.5em; margin: 0 0 4px; }
+  h2 { font-size: 1.05em; margin: 18px 0 6px; color: #5fd0ff; text-transform: uppercase; letter-spacing: 1px; }
+  .notice { border: 3px solid #ffcc33; color: #ffcc33; padding: 8px 10px; font-weight: bold; margin: 10px 0; }
+  .bad { border: 3px solid #ff5c5c; color: #ff9a9a; padding: 8px 10px; font-weight: bold; margin: 10px 0; }
+  .route { font-family: Consolas, 'Courier New', monospace; font-size: 1.05em; word-wrap: break-word; }
+  table { border-collapse: collapse; width: 100%; }
+  td { padding: 5px 0; border-bottom: 1px solid #333; vertical-align: top; }
+  td.v { text-align: right; font-weight: bold; white-space: nowrap; padding-left: 10px; }
+  td.x { color: #ff5c5c; }
+  pre { white-space: pre-wrap; word-wrap: break-word; font-family: Consolas, 'Courier New', monospace; font-size: 0.85em; border: 2px solid #333; padding: 8px; }
+  .muted { color: #b8bec7; }
+  .bar { margin-bottom: 8px; }
+  button { font-size: 20px; padding: 6px 14px; margin-right: 6px; background: #1c1f24; color: #fff; border: 2px solid #555; }
+  li { margin: 4px 0; color: #ffcc33; }
+</style>
+</head>
+<body>
+<div class="bar"><button onclick="zoom(-2)">A&minus;</button><button onclick="zoom(2)">A+</button></div>
+<div id="out"><p>Loading&hellip;</p></div>
+<script>
+  var size = 22;
+  function zoom(d) { size = Math.max(14, Math.min(40, size + d)); document.body.style.fontSize = size + 'px'; }
+
+  function esc(s) {
+    return String(s === undefined || s === null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function num(n) {
+    if (typeof n !== 'number' || isNaN(n)) return '—';
+    var s = String(Math.round(Math.abs(n)));
+    var out = '';
+    while (s.length > 3) { out = ',' + s.slice(-3) + out; s = s.slice(0, -3); }
+    return (n < 0 ? '-' : '') + s + out;
+  }
+  function hm(min) {
+    var m = Math.round(min);
+    var mm = String(m % 60);
+    return Math.floor(m / 60) + ':' + (mm.length < 2 ? '0' + mm : mm);
+  }
+  function row(k, v, cls) { return '<tr><td>' + esc(k) + '</td><td class="v ' + (cls || '') + '">' + v + '</td></tr>'; }
+
+  function decode(s) {
+    var b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    // UTF-8 bytes -> string, the ES5 way.
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+  }
+
+  function render(d) {
+    var u = esc(d.units);
+    var h = '';
+    h += '<h1>' + esc(d.flightNo ? d.flightNo + ' · ' : '') + esc(d.dep) + ' → ' + esc(d.arr) + '</h1>';
+    h += '<div class="muted">' + esc(d.aircraft) + ' · FL' + esc(d.cruiseFl) + ' · CI ' + esc(d.costIndex) + ' · ALTN ' + esc(d.altn || 'none') + '</div>';
+    h += '<div class="notice">' + esc(d.notice) + ' Simulation use only.</div>';
+    var bad = [];
+    for (var i = 0; i < d.limits.length; i++) if (!d.limits[i].ok) bad.push(d.limits[i]);
+    for (var j = 0; j < bad.length; j++) h += '<div class="bad">LIMIT EXCEEDED: ' + esc(bad[j].name) + ' ' + num(bad[j].value) + ' &gt; ' + num(bad[j].limit) + ' ' + esc(bad[j].unit) + '</div>';
+
+    h += '<h2>Route</h2><div class="route">' + esc(d.route) + '</div>';
+    h += '<div class="muted">' + num(d.distanceNm) + ' nm · ' + hm(d.tripMin) + ' · RWY ' + esc(d.depRwy || '—') + ' / ' + esc(d.arrRwy || '—') + '</div>';
+
+    var f = d.fuel;
+    h += '<h2>Fuel (' + u + ')</h2><table>';
+    h += row('Block', num(f.block)) + row('Trip', num(f.trip)) + row('Contingency', num(f.contingency));
+    h += row('Alternate', num(f.alternate)) + row('Final reserve', num(f.reserve)) + row('Extra', num(f.extra)) + row('Taxi', num(f.taxi));
+    h += row('Takeoff fuel', num(f.takeoff)) + row('Landing fuel', num(f.landing)) + '</table>';
+
+    var w = d.weights;
+    h += '<h2>Weights (' + u + ')</h2><table>';
+    for (var k = 0; k < d.limits.length; k++) {
+      var l = d.limits[k];
+      h += row(l.name + ' (max ' + num(l.limit) + ')', num(l.value) + (l.ok ? '' : ' ✖'), l.ok ? '' : 'x');
+    }
+    h += row('Payload', num(w.payload)) + '</table>';
+
+    if (d.warnings && d.warnings.length) {
+      h += '<h2>Warnings</h2><ul>';
+      for (var m = 0; m < d.warnings.length; m++) h += '<li>' + esc(d.warnings[m]) + '</li>';
+      h += '</ul>';
+    }
+    h += '<h2>FMC cheat sheet</h2><pre>' + esc(d.fmc) + '</pre>';
+    h += '<p class="muted">Prepared ' + esc(d.createdAt) + ' by SimPlanner.</p>';
+    return h;
+  }
+
+  var out = document.getElementById('out');
+  var m = /[#&]d=([A-Za-z0-9_-]+)/.exec(location.hash);
+  if (!m) {
+    out.innerHTML = '<h1>SimPlanner kiosk</h1><p>No briefing in this link. In SimPlanner, plan a flight and press <b>Copy kiosk link</b>, then open that link here.</p>';
+  } else {
+    try {
+      var data = decode(m[1]);
+      if (data.app !== 'simplanner-briefing') throw new Error('wrong data');
+      out.innerHTML = render(data);
+      document.title = data.dep + '-' + data.arr + ' SimPlanner';
+    } catch (e) {
+      out.innerHTML = '<h1>SimPlanner kiosk</h1><div class="bad">This link could not be read. It may have been cut off when it was copied.</div>';
+    }
+  }
+</script>
+</body>
+</html>

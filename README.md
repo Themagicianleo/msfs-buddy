@@ -5,6 +5,9 @@ the Fenix A320's) and styled like a native iPad app (Liquid Glass navigation and
 **METAR/TAF** for your airports, with **ChartFox** chart links. No Navigraph
 subscription needed.
 
+> **Also here: [SimPlanner](simplanner/README.md)**, a flight planner for flights you enter by hand
+> (no SimBrief needed): https://themagicianleo.github.io/msfs-buddy/simplanner/
+
 ## Features
 
 | Page | What it shows |
