@@ -51,7 +51,9 @@ plus, where available, openAIP (CC BY-NC 4.0), covering VOR, VOR-DME, VORTAC,
 TACAN and NDB beacons:
 
 * only beacons within 50 nm of the great-circle track count, ignoring the
-  first and last 30 nm (SID/STAR area);
+  first and last 30 nm (SID/STAR area). If none are that close, it looks up
+  to 100 nm away, but keeps that route only if it is at most 12% longer than
+  direct;
 * it steps along the track choosing the beacon that makes the most progress
   in the next 60–220 nm while staying close to the line. High-altitude VORs
   beat low/terminal ones, and NDBs are used only when no VOR is in reach;
@@ -59,7 +61,13 @@ TACAN and NDB beacons:
 * on a **domestic** flight it only uses beacons in that country, so a
   flight inside China never routes via beacons in India or Myanmar.
 
-**Optional, more beacons from openAIP:** create a free account at
+**openAIP files in the repo:** every `data/openaip/*_nav.json` (beacons)
+and `*_apt.json` (airports, used for missing runway headings) is merged on
+each data update. China (`cn_*`) is there now; to add a country, download
+its JSON export from https://www.openaip.net (Data → Export) and commit it
+to that folder. See `data/openaip/README.md`.
+
+**Optional, openAIP API:** create a free account at
 https://www.openaip.net, make an API key (your profile → API clients), and add
 it to this GitHub repository as a secret named `OPENAIP_API_KEY`
 (*Settings → Secrets and variables → Actions → New repository secret*). Then
@@ -68,10 +76,11 @@ added (including for China). openAIP data is CC BY-NC 4.0 (free,
 non-commercial use with credit), which fits this free personal site. Without
 the key only OurAirports is used.
 
-Coverage is the limit: the open data has few Chinese beacons in the west
-(around ZUDC/ZUNZ there are none), so those routes come out **Direct**. For
-a beacon route there, add the real fixes under *Waypoints* (from your charts)
-and choose **My own**.
+Coverage is the limit: the open data has few Chinese beacons in the west.
+With the openAIP China file, ZUDC→ZUNZ goes via DCH (Bamda) and ZULS→ZUAL
+via RKZ (Rikaze), but many routes still come out **Direct** (and flights
+under 220 nm are always one leg). For a beacon route there, add the real
+fixes under *Waypoints* (from your charts) and choose **My own**.
 
 The result looks like `ZBAA AAA DCT BBB DCT CCC RJTT`. It is flyable in the
 FMC (type the beacon idents; pick the right one if the FMC offers several) but

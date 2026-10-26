@@ -303,6 +303,41 @@ export function mergeNavaids(base: NavaidRow[], extra: NavaidRow[]): { merged: N
   return { merged, added };
 }
 
+/**
+ * Runway TRUE headings from an openAIP airport export, keyed by ICAO code and
+ * runway designator: { ZUNZ: { '05': 50, '23': 230 } }.
+ */
+export function parseOpenAipRunwayHeadings(json: unknown): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
+  for (const a of Array.isArray(json) ? (json as Record<string, unknown>[]) : []) {
+    const icao = typeof a.icaoCode === 'string' ? a.icaoCode.trim().toUpperCase() : '';
+    if (!/^[A-Z0-9]{4}$/.test(icao) || !Array.isArray(a.runways)) continue;
+    for (const r of a.runways as Record<string, unknown>[]) {
+      const d = typeof r.designator === 'string' ? r.designator.trim().toUpperCase() : '';
+      const h = Number(r.trueHeading);
+      if (!d || !Number.isFinite(h) || h < 0 || h > 360) continue;
+      (out[icao] ??= {})[d] = h;
+    }
+  }
+  return out;
+}
+
+/** Fill runways that have no heading. Returns how many were filled. */
+export function fillRunwayHeadings(ds: AirportDataset, headings: Record<string, Record<string, number>>): number {
+  let filled = 0;
+  for (const [icao, rwys] of Object.entries(ds.runways)) {
+    const known = headings[icao];
+    if (!known) continue;
+    for (const r of rwys) {
+      if (r[2] === null && known[r[0]] !== undefined) {
+        r[2] = known[r[0]];
+        filled++;
+      }
+    }
+  }
+  return filled;
+}
+
 /** openAIP REST API (needs a free API key from openaip.net). */
 export const OPENAIP_API = 'https://api.core.openaip.net/api';
 

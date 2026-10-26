@@ -5,14 +5,32 @@
 // Locally:  npx vite-node scripts/build-airport-data.ts
 //           npx vite-node scripts/build-airport-data.ts -- --from ./csv-folder
 //   (--from reads airports.csv, runways.csv and navaids.csv from a folder)
+//           npx vite-node scripts/build-airport-data.ts -- --augment
+//   (--augment skips the download and re-applies data/openaip to the
+//    existing public/data/ourairports.json)
+//
+// Also merges hand-downloaded openAIP exports from data/openaip/ (see the
+// README there): *_nav.json beacons and *_apt.json runway headings.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { buildDataset, mergeNavaids, OPENAIP_API, OURAIRPORTS_URLS, parseOpenAipNavaids, type AirportDataset, type NavaidRow } from '../src/simplanner/lib/airports';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  buildDataset,
+  fillRunwayHeadings,
+  mergeNavaids,
+  OPENAIP_API,
+  OURAIRPORTS_URLS,
+  parseOpenAipNavaids,
+  parseOpenAipRunwayHeadings,
+  type AirportDataset,
+  type NavaidRow,
+} from '../src/simplanner/lib/airports';
 
 const OUT_DIR = 'public/data';
 const OUT = `${OUT_DIR}/ourairports.json`;
 const fromIdx = process.argv.indexOf('--from');
 const fromDir = fromIdx > 0 ? process.argv[fromIdx + 1] : '';
+const augment = process.argv.includes('--augment');
+const LOCAL_OPENAIP = 'data/openaip';
 
 async function get(name: keyof typeof OURAIRPORTS_URLS): Promise<string> {
   if (fromDir) return readFileSync(`${fromDir}/${name}.csv`, 'utf8');
@@ -21,9 +39,34 @@ async function get(name: keyof typeof OURAIRPORTS_URLS): Promise<string> {
   return res.text();
 }
 
-const [airports, runways, navaids] = await Promise.all([get('airports'), get('runways'), get('navaids')]);
 const date = new Date().toISOString().slice(0, 10);
-const ds = buildDataset(airports, runways, `OurAirports, downloaded ${date}`, navaids);
+let ds: AirportDataset;
+if (augment) {
+  ds = JSON.parse(readFileSync(OUT, 'utf8')) as AirportDataset;
+  ds.source = ds.source.replace(/ \+ openAIP.*$/, '');
+} else {
+  const [airports, runways, navaids] = await Promise.all([get('airports'), get('runways'), get('navaids')]);
+  ds = buildDataset(airports, runways, `OurAirports, downloaded ${date}`, navaids);
+}
+
+// Hand-downloaded openAIP exports committed in data/openaip/.
+let localOpenAip = 0;
+if (existsSync(LOCAL_OPENAIP)) {
+  for (const file of readdirSync(LOCAL_OPENAIP).sort()) {
+    const path = `${LOCAL_OPENAIP}/${file}`;
+    if (file.endsWith('_nav.json')) {
+      const { merged, added } = mergeNavaids(ds.navaids ?? [], parseOpenAipNavaids(JSON.parse(readFileSync(path, 'utf8'))));
+      ds.navaids = merged;
+      localOpenAip += added;
+      console.log(`${path}: added ${added} beacons.`);
+    } else if (file.endsWith('_apt.json')) {
+      const filled = fillRunwayHeadings(ds, parseOpenAipRunwayHeadings(JSON.parse(readFileSync(path, 'utf8'))));
+      if (filled) localOpenAip++;
+      console.log(`${path}: filled ${filled} runway headings.`);
+    }
+  }
+}
+if (localOpenAip) ds.source += ' + openAIP (CC BY-NC 4.0)';
 
 // openAIP adds beacons OurAirports lacks (coverage varies by country).
 // Optional: needs a free openAIP API key in the OPENAIP_API_KEY repository
@@ -48,21 +91,21 @@ async function openAipNavaids(apiKey: string): Promise<NavaidRow[]> {
 }
 
 const openAipKey = process.env.OPENAIP_API_KEY ?? '';
-if (!fromDir && openAipKey) {
+if (!fromDir && !augment && openAipKey) {
   try {
     const { merged, added } = mergeNavaids(ds.navaids ?? [], await openAipNavaids(openAipKey));
     ds.navaids = merged;
     console.log(`openAIP: added ${added} beacons not already in OurAirports.`);
-    if (added) ds.source += ' + openAIP navaids (CC BY-NC 4.0)';
+    if (added && !ds.source.includes('openAIP')) ds.source += ' + openAIP (CC BY-NC 4.0)';
   } catch (e) {
     console.log(`openAIP skipped: ${(e as Error).message}`);
   }
-} else if (!fromDir) {
-  console.log('openAIP skipped: no OPENAIP_API_KEY secret set (optional; see simplanner/README.md).');
+} else if (!fromDir && !augment) {
+  console.log('openAIP API skipped: no OPENAIP_API_KEY secret set (optional; see simplanner/README.md).');
 }
 
 // Refuse to publish an obviously broken download.
-if (!fromDir && (ds.airports.length < 5000 || (ds.navaids?.length ?? 0) < 1000)) {
+if (!fromDir && !augment && (ds.airports.length < 5000 || (ds.navaids?.length ?? 0) < 1000)) {
   throw new Error(`Suspiciously small download: ${ds.airports.length} airports, ${ds.navaids?.length} navaids. Not writing.`);
 }
 

@@ -18,9 +18,13 @@ export interface RouteOptions {
   corridorNm: number;
   /** Ignore beacons this close to either airport (SID/STAR territory). */
   terminalNm: number;
+  /** Wider corridor tried when nothing is found within corridorNm. */
+  wideCorridorNm: number;
+  /** Longest route (as a multiple of direct) accepted from the wide corridor. */
+  maxDetour: number;
 }
 
-export const DEFAULT_ROUTE_OPTIONS: RouteOptions = { minLegNm: 60, maxLegNm: 220, corridorNm: 50, terminalNm: 30 };
+export const DEFAULT_ROUTE_OPTIONS: RouteOptions = { minLegNm: 60, maxLegNm: 220, corridorNm: 50, terminalNm: 30, wideCorridorNm: 100, maxDetour: 1.12 };
 
 export interface GeneratedRoute {
   route: string;
@@ -72,42 +76,57 @@ export function generateRoute(dep: Place, arr: Place, allNavaids: Navaid[], mode
     return { route: 'DCT', navaids: [], directNm, routeNm: directNm, note: 'Short flight: direct route.' };
   }
 
-  // Cheap box filter, then exact track position.
-  const minLat = Math.min(dep.lat, arr.lat) - 6;
-  const maxLat = Math.max(dep.lat, arr.lat) + 6;
-  const candidates = navaids
-    .filter((n) => n.lat >= minLat && n.lat <= maxLat)
-    .map((n) => ({ n, ...trackPosition(dep, arr, n) }))
-    .filter((c) => Math.abs(c.crossNm) <= opts.corridorNm && c.alongNm >= opts.terminalNm && c.alongNm <= directNm - opts.terminalNm)
-    .sort((a, b) => a.alongNm - b.alongNm);
+  const pick = (corridorNm: number) => {
+    // Cheap box filter, then exact track position.
+    const minLat = Math.min(dep.lat, arr.lat) - 6;
+    const maxLat = Math.max(dep.lat, arr.lat) + 6;
+    const candidates = navaids
+      .filter((n) => n.lat >= minLat && n.lat <= maxLat)
+      .map((n) => ({ n, ...trackPosition(dep, arr, n) }))
+      .filter((c) => Math.abs(c.crossNm) <= corridorNm && c.alongNm >= opts.terminalNm && c.alongNm <= directNm - opts.terminalNm)
+      .sort((a, b) => a.alongNm - b.alongNm);
 
-  const picked: Navaid[] = [];
-  let pos = 0;
-  let guard = 0;
-  while (directNm - pos > opts.maxLegNm && guard++ < 500) {
-    let window = candidates.filter((c) => c.alongNm >= pos + opts.minLegNm && c.alongNm <= pos + opts.maxLegNm);
-    if (!window.length) {
-      // Nothing in reach (e.g. over water): fly direct to the next beacon ahead, if any.
-      const next = candidates.find((c) => c.alongNm >= pos + opts.minLegNm);
-      if (!next) break;
-      window = candidates.filter((c) => c.alongNm >= next.alongNm && c.alongNm <= next.alongNm + opts.maxLegNm - opts.minLegNm);
+    const picked: Navaid[] = [];
+    let pos = 0;
+    let guard = 0;
+    while (directNm - pos > opts.maxLegNm && guard++ < 500) {
+      let window = candidates.filter((c) => c.alongNm >= pos + opts.minLegNm && c.alongNm <= pos + opts.maxLegNm);
+      if (!window.length) {
+        // Nothing in reach (e.g. over water): fly direct to the next beacon ahead, if any.
+        const next = candidates.find((c) => c.alongNm >= pos + opts.minLegNm);
+        if (!next) break;
+        window = candidates.filter((c) => c.alongNm >= next.alongNm && c.alongNm <= next.alongNm + opts.maxLegNm - opts.minLegNm);
+      }
+      // Favour progress along the track, then staying close to it.
+      const best = window.reduce((a, b) => {
+        const s = (c: (typeof window)[number]) => (c.alongNm - pos) - 2 * Math.abs(c.crossNm) - penalty(c.n);
+        return s(b) > s(a) ? b : a;
+      });
+      if (picked[picked.length - 1]?.ident !== best.n.ident) picked.push(best.n);
+      pos = best.alongNm;
     }
-    // Favour progress along the track, then staying close to it.
-    const best = window.reduce((a, b) => {
-      const s = (c: (typeof window)[number]) => (c.alongNm - pos) - 2 * Math.abs(c.crossNm) - penalty(c.n);
-      return s(b) > s(a) ? b : a;
-    });
-    if (picked[picked.length - 1]?.ident !== best.n.ident) picked.push(best.n);
-    pos = best.alongNm;
-  }
 
-  const pts: LatLon[] = [dep, ...picked, arr];
-  let routeNm = 0;
-  for (let i = 1; i < pts.length; i++) routeNm += distanceNm(pts[i - 1], pts[i]);
+    const pts: LatLon[] = [dep, ...picked, arr];
+    let routeNm = 0;
+    for (let i = 1; i < pts.length; i++) routeNm += distanceNm(pts[i - 1], pts[i]);
+    return { picked, routeNm };
+  };
+
+  let { picked, routeNm } = pick(opts.corridorNm);
+  // Sparse regions (western China): look twice as far off track when nothing
+  // is close, but only keep the result if the detour stays small.
+  let widened = false;
+  if (!picked.length && opts.wideCorridorNm > opts.corridorNm) {
+    const wide = pick(opts.wideCorridorNm);
+    if (wide.picked.length && wide.routeNm / directNm <= opts.maxDetour) {
+      ({ picked, routeNm } = wide);
+      widened = true;
+    }
+  }
   const route = picked.length ? picked.map((n) => n.ident).join(' DCT ') : 'DCT';
   const extra = ((routeNm / directNm - 1) * 100).toFixed(1);
   const note = picked.length
-    ? `VOR-to-VOR route through ${picked.length} beacons, ${extra}% longer than direct. Not an airway route; add the SID and STAR in the FMC.`
+    ? `VOR-to-VOR route through ${picked.length} beacon${picked.length === 1 ? '' : 's'}, ${extra}% longer than direct${widened ? ` (no beacon within ${opts.corridorNm} nm of the track, so one up to ${opts.wideCorridorNm} nm away is used)` : ''}. Not an airway route; add the SID and STAR in the FMC.`
     : `No beacons near the track in the open data${domestic ? ` (only ${domestic} beacons are used on a domestic flight)` : ''}, so the route is direct. Add the real waypoints under Waypoints and choose "My own" for a beacon route.`;
   return { route, navaids: picked, directNm, routeNm, note };
 }

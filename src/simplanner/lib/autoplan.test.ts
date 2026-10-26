@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AirportIndex, buildDataset, mergeNavaids, parseOpenAipNavaids, type Airport, type Navaid, type NavaidRow } from './airports';
+import { AirportIndex, buildDataset, fillRunwayHeadings, mergeNavaids, parseOpenAipNavaids, parseOpenAipRunwayHeadings, type Airport, type AirportDataset, type Navaid, type NavaidRow } from './airports';
 import { generateRoute, pickRunway, suggestAlternates, suggestCruiseFl, trackPosition } from './autoplan';
 
 const nav = (ident: string, lat: number, lon: number, type = 'VOR-DME', usage = 'HI', country = ''): Navaid => ({ ident, name: ident, type, lat, lon, usage, country, source: 'ourairports' });
@@ -44,6 +44,19 @@ describe('route generator', () => {
     expect(generateRoute(DEP, ARR, navaids, 'direct').route).toBe('DCT');
     const gap = generateRoute(DEP, { lat: 0, lon: 30 }, [nav('ONLY', 0, 15)], 'navaids');
     expect(gap.route).toBe('ONLY');
+  });
+
+  it('looks wider off track only when nothing is close and the detour is small', () => {
+    const off = (crossDeg: number) => [nav('OFF', crossDeg, 5)];
+    // ~75 nm off a 600 nm track: about 3% longer, accepted.
+    const wide = generateRoute(DEP, ARR, off(1.25), 'navaids');
+    expect(wide.route).toBe('OFF');
+    expect(wide.note).toMatch(/up to 100 nm away/);
+    // A closer beacon wins without widening.
+    expect(generateRoute(DEP, ARR, [...off(1.25), nav('NEAR', 0.3, 5)], 'navaids').route).toBe('NEAR');
+    // Too big a detour on a short flight: stays direct.
+    const short = { lat: 0, lon: 4.5 }; // ~270 nm
+    expect(generateRoute(DEP, short, [nav('OFF', 1.5, 2.25)], 'navaids').route).toBe('DCT');
   });
 
   it('uses direct for short hops', () => {
@@ -147,6 +160,19 @@ describe('openAIP navaids', () => {
     const { merged, added } = mergeNavaids(base, parseOpenAipNavaids(sample));
     expect(added).toBe(1); // DCY is the same beacon (within 10 nm); XY is new
     expect(merged.map((r) => r[0])).toEqual(['DCY', 'XY']);
+  });
+
+  it('reads runway headings from the airport export and fills only missing ones', () => {
+    const apt = [
+      { icaoCode: 'zunz', runways: [{ designator: '05', trueHeading: 50 }, { designator: '23', trueHeading: 230 }, { designator: 'X', trueHeading: 999 }] },
+      { name: 'No ICAO', runways: [{ designator: '01', trueHeading: 10 }] },
+    ];
+    const h = parseOpenAipRunwayHeadings(apt);
+    expect(h).toEqual({ ZUNZ: { '05': 50, '23': 230 } });
+    expect(parseOpenAipRunwayHeadings({ nope: 1 })).toEqual({});
+    const ds: AirportDataset = { importedAt: '', source: '', airports: [], runways: { ZUNZ: [['05', 9843, null, 'UNK'], ['23', 9843, 231, 'UNK']] } };
+    expect(fillRunwayHeadings(ds, h)).toBe(1);
+    expect(ds.runways.ZUNZ.map((r) => r[2])).toEqual([50, 231]);
   });
 
   it('keeps domestic routes on domestic beacons', () => {
