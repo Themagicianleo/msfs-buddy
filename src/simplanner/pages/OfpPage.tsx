@@ -9,6 +9,8 @@ import type { Airport } from '../lib/airports';
 import type { RoutePoint } from '../lib/route';
 import { BriefingPage, WeatherSection } from './BriefingPage';
 import { describeLoad, fitPayload, randomPayload } from '../lib/payload';
+import { toEfbPlan } from '../lib/efb';
+import { save as saveEfb } from '../../lib/storage';
 
 export function exportFlight(dep: Airport, arr: Airport, points: RoutePoint[], cruiseFl: number): ExportFlight {
   const ap = (a: Airport): ExportFlight['dep'] => ({ ident: a.icao, name: a.name, lat: a.lat, lon: a.lon, type: 'airport', source: a.source, via: '', elevationFt: a.elevationFt });
@@ -64,6 +66,12 @@ export function OfpPage() {
           </div>
         </div>
         <div className="row">
+          <button className="btn" onClick={() => {
+            // The EFB is another page of this site and reads its flight from the same browser storage.
+            saveEfb('plan', toEfbPlan({ inputs, plan, route, profile, dep, arr, altn, fmcText: derived.fmcText }));
+            saveEfb('page', 'flight');
+            location.href = import.meta.env.BASE_URL;
+          }}>Open in EFB</button>
           <a className="btn" href="#dispatch">Edit flight</a>
           <span className="muted">Alternate <b>{altn ? `${altn.icao} ${altn.name}` : inputs.altn || 'none'}</b></span>
         </div>

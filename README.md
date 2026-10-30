@@ -7,6 +7,7 @@ subscription needed.
 
 > **Also here: [SimPlanner](simplanner/README.md)**, a flight planner for flights you enter by hand
 > (no SimBrief needed): https://themagicianleo.github.io/msfs-buddy/simplanner/
+> Its **Open in EFB** button shows a SimPlanner flight here, in place of the SimBrief one.
 
 ## Features
 

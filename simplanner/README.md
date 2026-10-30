@@ -39,6 +39,11 @@ server, no telemetry. Your data never leaves the device unless you export it.
    and a printable briefing, plus **MSFS .pln**, **Little Navmap**,
    **Copy route**, **share link** and **kiosk link**. Every generated flight
    is saved under **Flights**.
+4. **Open in EFB** shows the flight in the EFB (same site, same browser):
+   map, OFP text, navlog, fuel, weights and logbook work as for a SimBrief
+   flight; scheduled times stay empty (SimPlanner has no departure time) and
+   per-fix times, fuel and altitudes are spread from the estimates. The EFB
+   keeps it until you press its refresh button, which fetches SimBrief again.
 
 Before trusting the numbers, check your aircraft profile on the **Aircraft**
 page and set `"verified": true`.

@@ -98,7 +98,7 @@ function Navlog({ plan }: { plan: FlightPlan }) {
                 {f.name && f.name !== f.ident && <small>{f.name}</small>}
               </td>
               <td className={f.isSidStar ? 'accent' : ''}>{f.via}</td>
-              <td>{f.altitude === null ? '—' : f.altitude >= 10000 ? `FL${Math.round(f.altitude / 100)}` : fmtNum(f.altitude)}</td>
+              <td>{f.altitude === null ? '—' : f.altitude >= 10000 && f.type !== 'apt' ? `FL${Math.round(f.altitude / 100)}` : fmtNum(f.altitude)}</td>
               <td>{f.trackMag === null ? '' : String(Math.round(f.trackMag)).padStart(3, '0')}</td>
               <td>{f.windDir === null ? '' : `${String(Math.round(f.windDir)).padStart(3, '0')}/${f.windSpd}`}</td>
               <td>{f.oat ?? ''}</td>

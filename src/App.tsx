@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from './components/Icon';
 import { LINKS, MORE, PAGE_TITLES, TABS, type Page } from './components/nav';
 import { AppShell, ClockCapsule } from './shared/AppShell';
@@ -56,9 +56,29 @@ export default function App() {
   }, [setPage]);
 
   // Pull the latest OFP on start-up, and whenever the SimBrief user changes.
+  // A flight sent from SimPlanner is kept on start-up (as if already fetched
+  // for this user); the refresh button still fetches SimBrief.
+  const fetchedFor = useRef(plan?.source === 'simplanner' ? settings.simbriefUser : null);
   useEffect(() => {
-    if (settings.simbriefUser) void refresh();
+    if (!settings.simbriefUser || settings.simbriefUser === fetchedFor.current) return;
+    fetchedFor.current = settings.simbriefUser;
+    void refresh();
   }, [refresh, settings.simbriefUser]);
+
+  // SimPlanner (another page of this site) can send a flight while the EFB is open in another tab.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'msfs-buddy.plan' || !e.newValue) return;
+      try {
+        setPlan(JSON.parse(e.newValue) as FlightPlan);
+        setState({ status: 'ok', at: new Date(), message: 'Flight from SimPlanner' });
+      } catch {
+        // ignore a half-written value
+      }
+    };
+    addEventListener('storage', onStorage);
+    return () => removeEventListener('storage', onStorage);
+  }, []);
 
   const common = { plan, settings, theme };
 
@@ -71,7 +91,7 @@ export default function App() {
       </button>
     </>
   );
-  const subtitle = plan && `${plan.callsign || plan.flightNumber} · ${plan.origin.icao} – ${plan.destination.icao} · ${plan.aircraft.icao}`;
+  const subtitle = plan && [plan.callsign || plan.flightNumber, `${plan.origin.icao} – ${plan.destination.icao}`, plan.aircraft.icao, plan.source === 'simplanner' ? 'from SimPlanner' : ''].filter(Boolean).join(' · ');
 
   return (
     <AppShell name="EFB" actions={actions} title={PAGE_TITLES[page]} subtitle={subtitle} tabs={TABS} more={MORE} links={LINKS} page={page} onSelect={setPage} solid={settings.reduceTransparency}>

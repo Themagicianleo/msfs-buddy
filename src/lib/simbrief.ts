@@ -79,6 +79,8 @@ export interface TlrSection {
 
 export interface FlightPlan {
   id: string;
+  /** Where the plan came from; SimBrief when missing (older saved plans). */
+  source?: 'simbrief' | 'simplanner';
   generatedAt: number | null; // unix seconds
   airac: string;
   units: 'kgs' | 'lbs';
