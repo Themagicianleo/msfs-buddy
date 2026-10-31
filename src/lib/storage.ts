@@ -64,6 +64,8 @@ export interface Settings {
   showLocalTime: boolean;
   reduceTransparency: boolean;
   appearance: Appearance;
+  /** OpenATC's address on the sim PC, as its helper window shows it. */
+  openAtcUrl: string;
 }
 
 export type Appearance = 'system' | 'light' | 'dark';
@@ -76,4 +78,5 @@ export const DEFAULT_SETTINGS: Settings = {
   showLocalTime: true,
   reduceTransparency: false,
   appearance: 'system',
+  openAtcUrl: '',
 };

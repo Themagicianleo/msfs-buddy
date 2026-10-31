@@ -8,6 +8,8 @@ subscription needed.
 > **Also here: [SimPlanner](simplanner/README.md)**, a flight planner for flights you enter by hand
 > (no SimBrief needed): https://themagicianleo.github.io/msfs-buddy/simplanner/
 > Its **Open in EFB** button shows a SimPlanner flight here, in place of the SimBrief one.
+> Flights can be handed to **OpenATC** (your ATC app on the sim PC): **Open in OpenATC** /
+> **Copy for OpenATC** on the Flight page and OFP → ATC Flight Plan. Set its address in Settings.
 
 ## Features
 

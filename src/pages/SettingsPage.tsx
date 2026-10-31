@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { LoadState } from '../App';
 import { CopyButton, Panel, Tabs } from '../components/ui';
+import { normaliseOpenAtcUrl } from '../lib/openatc';
 import { personalLink, syncUserInUrl, type Appearance, type Settings } from '../lib/storage';
 
 export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
@@ -11,6 +12,8 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
   state: LoadState;
 }) {
   const [user, setUser] = useState(settings.simbriefUser);
+  const [atc, setAtc] = useState(settings.openAtcUrl);
+  const atcUrl = normaliseOpenAtcUrl(atc);
   const dirty = user.trim() !== settings.simbriefUser;
 
   const saveUser = (e: React.FormEvent) => {
@@ -65,6 +68,23 @@ export function SettingsPage({ settings, onChange, onRefresh, onDemo, state }: {
             <button className="btn" onClick={onDemo}>Load demo flight</button>
           </div>
         </div>
+      </Panel>
+
+      <Panel title="OpenATC">
+        <form className="setting-row" onSubmit={(e) => { e.preventDefault(); onChange({ ...settings, openAtcUrl: atcUrl ?? '' }); setAtc(atcUrl ?? ''); }}>
+          <div>
+            <div>OpenATC address</div>
+            <div className="muted small">
+              The “App on the iPad” address from the OpenATC helper window, e.g. https://192.168.1.50:8443/. The OFP page can then
+              open your flight plan in OpenATC.
+            </div>
+            {atc.trim() && !atcUrl && <div className="small warn">That doesn’t look like an address.</div>}
+          </div>
+          <div className="btn-row">
+            <input className="input" value={atc} onChange={(e) => setAtc(e.target.value)} placeholder="192.168.1.50:8443" inputMode="url" autoCapitalize="none" spellCheck={false} />
+            <button className="btn btn-primary" type="submit" disabled={(atcUrl ?? '') === settings.openAtcUrl || (!!atc.trim() && !atcUrl)}>Save</button>
+          </div>
+        </form>
       </Panel>
 
       <Panel title="Display & weather">

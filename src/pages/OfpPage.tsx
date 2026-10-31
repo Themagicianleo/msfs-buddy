@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CopyButton, NoPlan, Panel, Tabs } from '../components/ui';
 import { fmtDuration, fmtNum } from '../lib/format';
 import type { FlightPlan } from '../lib/simbrief';
+import { openAtcCode, openAtcLink, toOpenAtcPlan } from '../lib/openatc';
 import type { Settings } from '../lib/storage';
 
 type Tab = 'ofp' | 'navlog' | 'atc';
@@ -17,7 +18,7 @@ function ofpDocument(html: string) {
   </style></head><body>${html}</body></html>`;
 }
 
-export function OfpPage({ plan }: { plan: FlightPlan | null; settings: Settings }) {
+export function OfpPage({ plan, settings }: { plan: FlightPlan | null; settings: Settings }) {
   const [tab, setTab] = useState<Tab>('ofp');
   if (!plan) return <NoPlan what="the OFP" />;
 
@@ -59,6 +60,7 @@ export function OfpPage({ plan }: { plan: FlightPlan | null; settings: Settings 
               {plan.origin.icao} {plan.route} {plan.destination.icao}
             </div>
           </Panel>
+          <OpenAtcPanel plan={plan} settings={settings} />
           <Panel title="ICAO flight plan" right={<CopyButton text={plan.atcFlightPlan} />}>
             <pre className="route-box mono pre">{plan.atcFlightPlan || '—'}</pre>
           </Panel>
@@ -113,5 +115,30 @@ function Navlog({ plan }: { plan: FlightPlan }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Hand the flight to OpenATC: a link when its address is set, or a code to paste. */
+function OpenAtcPanel({ plan, settings }: { plan: FlightPlan; settings: Settings }) {
+  const link = openAtcLink(settings.openAtcUrl, plan);
+  const fp = toOpenAtcPlan(plan);
+  return (
+    <Panel
+      title="OpenATC"
+      right={
+        <div className="btn-row">
+          {link && <a className="btn btn-primary btn-small" href={link} target="_blank" rel="noreferrer">Open in OpenATC</a>}
+          <CopyButton text={openAtcCode(plan)} label="Copy for OpenATC" />
+        </div>
+      }
+    >
+      <div className="muted small">
+        Fills OpenATC’s flight plan ({[fp.callsign, `${fp.dep} → ${fp.arr}`, fp.cruise, fp.sid && `SID ${fp.sid}`, fp.star && `STAR ${fp.star}`, fp.region === 'china' ? 'China phraseology' : 'ICAO phraseology'].filter(Boolean).join(' · ')}).
+        Check it there and press Start flight.{' '}
+        {link
+          ? 'If OpenATC runs as a Home Screen app, use Copy for OpenATC, then Paste from EFB in OpenATC.'
+          : 'Set OpenATC’s address in Settings for a one-tap link; until then, copy the code and use Paste from EFB in OpenATC.'}
+      </div>
+    </Panel>
   );
 }

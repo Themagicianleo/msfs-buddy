@@ -1,10 +1,11 @@
 import type { LoadState } from '../App';
 import type { Page } from '../components/nav';
-import { CatBadge, Field, Panel } from '../components/ui';
+import { CatBadge, CopyButton, Field, Panel } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { RouteMap } from '../components/RouteMap';
 import { fmtAltitude, fmtDuration, fmtNum, fmtZulu } from '../lib/format';
 import { parseMetar } from '../lib/metar';
+import { openAtcCode, openAtcLink } from '../lib/openatc';
 import { simbriefDispatchUrl, type Airport, type FlightPlan } from '../lib/simbrief';
 import type { Settings } from '../lib/storage';
 
@@ -162,6 +163,11 @@ export function FlightPage({ plan, settings, theme, state, onRefresh, onDemo, on
         <button className="btn" onClick={() => onGoto('weather')}>Weather</button>
         <button className="btn" onClick={() => onGoto('charts')}>Charts (ChartFox)</button>
         <button className="btn" onClick={() => onGoto('ofp')}>Full OFP</button>
+        {openAtcLink(settings.openAtcUrl, plan) ? (
+          <a className="btn" href={openAtcLink(settings.openAtcUrl, plan)!} target="_blank" rel="noreferrer">Open in OpenATC</a>
+        ) : (
+          <CopyButton text={openAtcCode(plan)} label="Copy for OpenATC" />
+        )}
         {plan.pdfUrl && <a className="btn" href={plan.pdfUrl} target="_blank" rel="noreferrer">OFP PDF</a>}
         <a className="btn" href={simbriefDispatchUrl(plan)} target="_blank" rel="noreferrer">New flight on SimBrief</a>
         <span className="muted small push-right">
