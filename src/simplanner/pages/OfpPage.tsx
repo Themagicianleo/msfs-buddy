@@ -10,6 +10,7 @@ import type { RoutePoint } from '../lib/route';
 import { BriefingPage, WeatherSection } from './BriefingPage';
 import { describeLoad, fitPayload, randomPayload } from '../lib/payload';
 import { toEfbPlan } from '../lib/efb';
+import { blockTimes, zulu } from '../lib/times';
 import { save as saveEfb } from '../../lib/storage';
 
 export function exportFlight(dep: Airport, arr: Airport, points: RoutePoint[], cruiseFl: number): ExportFlight {
@@ -44,6 +45,7 @@ export function OfpPage() {
   }
 
   const fullRoute = [inputs.dep, route.fmcRoute, inputs.arr].filter(Boolean).join(' ');
+  const times = blockTimes(inputs.depTime, profile.defaults.taxiMinutes ?? 0, plan.tripTimeMin);
 
   return (
     <div>
@@ -58,6 +60,7 @@ export function OfpPage() {
             <div className="muted">{inputs.flightNo || 'Flight'} · {profile.name}{inputs.variant ? ` (${inputs.variant})` : ''}</div>
             <div className="ofp-line">✈</div>
             <div>{fmtWeight(plan.distanceNm)} nm · {fmtHm(plan.tripTimeMin)} · FL{inputs.cruiseFl}</div>
+            {times && <div className="muted">OUT {zulu(times.out)} · IN {zulu(times.in)}</div>}
           </div>
           <div className="right">
             <div className="ofp-icao">{arr.icao}</div>
@@ -99,6 +102,17 @@ export function OfpPage() {
             <Tile k="LW" v={fmtWeight(plan.weights.lw)} u={u} bad={!limitOk('Landing weight')} />
             <Tile k="Pax / cargo" v={`${inputs.paxCount}`} u={`/ ${fmtWeight(inputs.cargo)} ${u}`} />
           </div>
+          {times && (
+            <Section title="Times (UTC)">
+              <div className="tiles">
+                <Tile k="Out (block)" v={zulu(times.out)} u="" />
+                <Tile k="Off (takeoff)" v={zulu(times.off)} u="" />
+                <Tile k="On (landing)" v={zulu(times.on)} u="" />
+                <Tile k="In (block)" v={zulu(times.in)} u="" />
+              </div>
+              <p className="muted" style={{ margin: 0 }}>Off blocks {times.out.toISOString().slice(0, 10)}; taxi {profile.defaults.taxiMinutes ?? 0} min each way. Estimates.</p>
+            </Section>
+          )}
           <Section title="Load" actions={<button className="btn btn-small" onClick={reroll}>New random load</button>}>
             <p style={{ margin: 0 }}>
               {inputs.loadNote ?? `${inputs.paxCount} passengers and ${fmtWeight(inputs.cargo)} ${u} of cargo (set by hand).`}

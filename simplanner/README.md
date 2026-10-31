@@ -41,8 +41,10 @@ server, no telemetry. Your data never leaves the device unless you export it.
    is saved under **Flights**.
 4. **Open in EFB** shows the flight in the EFB (same site, same browser):
    map, OFP text, navlog, fuel, weights and logbook work as for a SimBrief
-   flight; scheduled times stay empty (SimPlanner has no departure time) and
-   per-fix times, fuel and altitudes are spread from the estimates. The EFB
+   flight. Set the optional **off-blocks time (UTC)** on Dispatch to get
+   OUT/OFF/ON/IN times (taxi time from the aircraft profile each way, plus
+   the planned trip time); without it the EFB shows only durations. Per-fix
+   times, fuel and altitudes are spread from the estimates. The EFB
    keeps it until you press its refresh button, which fetches SimBrief again.
 
 Before trusting the numbers, check your aircraft profile on the **Aircraft**

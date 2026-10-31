@@ -185,7 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Keep the flight itself; reset the aircraft-specific numbers to the new profile.
     setInputs({
       ...d,
-      dep: inputs.dep, arr: inputs.arr, altn: inputs.altn, route: inputs.route, depRwy: inputs.depRwy, arrRwy: inputs.arrRwy, flightNo: inputs.flightNo,
+      dep: inputs.dep, arr: inputs.arr, altn: inputs.altn, route: inputs.route, depRwy: inputs.depRwy, arrRwy: inputs.arrRwy, flightNo: inputs.flightNo, depTime: inputs.depTime,
       routeMode: inputs.routeMode, autoCruise: inputs.autoCruise, autoAlternate: inputs.autoAlternate, autoRunways: inputs.autoRunways, loadMode: inputs.loadMode, publishedRoute: inputs.publishedRoute,
       paxCount: Math.min(inputs.paxCount, p.capacity.maxPax),
     });

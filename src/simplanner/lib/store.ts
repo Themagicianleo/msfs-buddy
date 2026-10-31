@@ -16,6 +16,8 @@ export interface FlightInputs extends PlanInputs {
   depRwy: string;
   arrRwy: string;
   flightNo: string;
+  /** Planned off-blocks time, UTC, e.g. "2026-10-30T09:30Z". Optional. */
+  depTime?: string;
   /** How Generate flight builds the route. */
   routeMode: 'airways' | 'navaids' | 'direct' | 'manual';
   autoCruise: boolean;

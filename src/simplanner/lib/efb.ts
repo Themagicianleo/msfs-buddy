@@ -14,6 +14,7 @@ import { ESTIMATE_WARNING, type PlanResult } from './planning';
 import type { AircraftProfile } from './profiles';
 import type { ParsedRoute } from './route';
 import type { FlightInputs } from './store';
+import { blockTimes, zulu, type BlockTimes } from './times';
 
 /** ICAO type designators for the shipped profiles (others show their name only). */
 const TYPE_CODES: Record<string, string> = {
@@ -80,7 +81,7 @@ function profileAt(d: number, total: number, p: PlanResult, cruiseFt: number, de
   };
 }
 
-function textOfp(x: EfbFlightInput, block: number): string {
+function textOfp(x: EfbFlightInput, block: number, times: BlockTimes | null): string {
   const { inputs: i, plan: p, profile, dep, arr, altn, route } = x;
   const u = p.units.toUpperCase();
   const w = (n: number) => String(round(n)).padStart(7);
@@ -91,6 +92,7 @@ function textOfp(x: EfbFlightInput, block: number): string {
     `ROUTE: ${dep.icao}/${i.depRwy || '---'} ${route.fmcRoute || 'DCT'} ${arr.icao}/${i.arrRwy || '---'}`,
     `DIST ${round(p.distanceNm)} NM   FL${i.cruiseFl}   CI ${i.costIndex}   AVG WIND ${i.windKt >= 0 ? 'P' : 'M'}${Math.abs(i.windKt)}`,
     `ALTN ${altn ? `${altn.icao} ${round(p.alternateDistanceNm)} NM` : 'NONE'}`,
+    ...(times ? [`OUT ${zulu(times.out)}   OFF ${zulu(times.off)}   ON ${zulu(times.on)}   IN ${zulu(times.in)}   (${times.out.toISOString().slice(0, 10)})`] : []),
     '',
     `FUEL (${u})       TIME`,
     `TRIP     ${w(p.fuel.trip)}   ${hm(p.tripTimeMin)}`,
@@ -122,6 +124,8 @@ export function toEfbPlan(x: EfbFlightInput): FlightPlan {
   const cruiseFt = i.cruiseFl * 100;
   const taxiMin = profile.defaults.taxiMinutes ?? 0;
   const block = p.fuel.block;
+  const times = blockTimes(i.depTime, taxiMin, p.tripTimeMin);
+  const unix = (d: Date | undefined) => (d ? Math.floor(d.getTime() / 1000) : null);
 
   // Navlog: every point after the departure, with times and fuel spread over the phases.
   const navlog: Fix[] = [];
@@ -191,9 +195,9 @@ export function toEfbPlan(x: EfbFlightInput): FlightPlan {
     avgWind: '',
     passengers: i.paxCount,
     times: {
-      // SimPlanner has no departure time, so only durations are known.
-      schedOut: null, schedOff: null, schedOn: null, schedIn: null,
-      estOut: null, estOff: null, estOn: null, estIn: null,
+      // From the departure time set on Dispatch, if any.
+      schedOut: unix(times?.out), schedOff: unix(times?.off), schedOn: unix(times?.on), schedIn: unix(times?.in),
+      estOut: unix(times?.out), estOff: unix(times?.off), estOn: unix(times?.on), estIn: unix(times?.in),
       ete: round(p.tripTimeMin * 60),
       block: round((p.tripTimeMin + 2 * taxiMin) * 60),
     },
@@ -227,7 +231,7 @@ export function toEfbPlan(x: EfbFlightInput): FlightPlan {
       ramp: round(p.weights.ramp),
     },
     navlog,
-    ofpHtml: textOfp(x, block),
+    ofpHtml: textOfp(x, block, times),
     pdfUrl: '',
     mapImages: [],
     takeoff: null,

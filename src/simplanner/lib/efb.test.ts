@@ -36,7 +36,17 @@ describe('sending a flight to the EFB', () => {
     expect(efb.weights.tow).toBe(Math.round(plan.weights.tow));
     expect(efb.weights.maxTow).toBe(profile.weights.mtow);
     expect(efb.times.ete).toBe(Math.round(plan.tripTimeMin * 60));
-    expect(efb.times.estOut).toBeNull(); // no departure time in SimPlanner
+    expect(efb.times.estOut).toBeNull(); // no departure time set
+  });
+
+  it('gives OUT/OFF/ON/IN times when a departure time is set', () => {
+    const timed = toEfbPlan({ inputs: { ...inputs, depTime: '2026-10-30T23:30Z' }, plan, route, profile, dep, arr, altn, fmcText: '' });
+    const taxi = profile.defaults.taxiMinutes * 60;
+    const out = Date.parse('2026-10-30T23:30Z') / 1000;
+    expect(timed.times).toMatchObject({ schedOut: out, estOut: out, estOff: out + taxi });
+    expect(timed.times.estOn! - timed.times.estOff!).toBeCloseTo(plan.tripTimeMin * 60, -2);
+    expect(timed.times.estIn! - timed.times.estOn!).toBe(taxi);
+    expect(timed.ofpHtml).toMatch(/OUT 2330Z {3}OFF \d{4}Z {3}ON \d{4}Z {3}IN \d{4}Z {3}\(2026-10-30\)/);
   });
 
   it('builds a navlog from departure to arrival with fuel falling and time rising', () => {

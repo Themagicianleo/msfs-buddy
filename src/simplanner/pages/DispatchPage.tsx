@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AirportPicker } from '../components/AirportPicker';
 import { Field, NumberInput, TextInput } from '../components/ui';
 import { generateFlight } from '../generate';
 import { findPublishedRoutes } from '../lib/caac';
+import { makeDepTime, suggestDeparture } from '../lib/times';
 import type { SavedFlight } from '../lib/store';
 import { useApp } from '../state';
 
@@ -76,6 +77,7 @@ export function DispatchPage() {
           <div className="od-arrow">→</div>
           <AirportPicker label="To" value={inputs.arr} onChange={(v) => set('arr', v)} placeholder="ZUNZ" />
         </div>
+        <DepartureTime value={inputs.depTime} onChange={(v) => set('depTime', v)} />
 
         <div className="options">
           <div className="option">
@@ -199,6 +201,42 @@ export function DispatchPage() {
           {busy ? 'Generating…' : 'Generate flight'}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Optional off-blocks time in UTC; gives OUT/OFF/ON/IN times on the OFP and in the EFB. */
+function DepartureTime({ value, onChange }: { value?: string; onChange: (v: string | undefined) => void }) {
+  const [date, setDate] = useState(value?.slice(0, 10) ?? '');
+  const [time, setTime] = useState(value?.slice(11, 16) ?? '');
+  useEffect(() => {
+    setDate(value?.slice(0, 10) ?? '');
+    setTime(value?.slice(11, 16) ?? '');
+  }, [value]);
+  const update = (d: string, t: string) => {
+    setDate(d);
+    setTime(t);
+    if (!t.trim()) onChange(undefined);
+    else {
+      const iso = makeDepTime(d, t);
+      if (iso) onChange(iso);
+    }
+  };
+  const invalid = !!time.trim() && !makeDepTime(date, time);
+  return (
+    <div className="form-grid" style={{ marginTop: 16 }}>
+      <Field label="Departure date (UTC)">
+        <input className="input" type="date" value={date} onChange={(e) => update(e.target.value, time)} />
+      </Field>
+      <Field label="Off blocks (UTC)" hint={invalid ? 'Enter a time like 09:30, and a date' : 'Optional. Gives block times on the OFP and in the EFB.'}>
+        <input className="input mono" inputMode="numeric" placeholder="09:30" value={time} onChange={(e) => update(date, e.target.value)} />
+      </Field>
+      <Field label=" ">
+        <div className="row">
+          <button type="button" className="btn btn-small" onClick={() => { const s = suggestDeparture(); update(s.date, s.time); }}>In 30 min</button>
+          {value && <button type="button" className="btn btn-small" onClick={() => update('', '')}>Clear</button>}
+        </div>
+      </Field>
     </div>
   );
 }
