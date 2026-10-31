@@ -282,9 +282,9 @@ depends on the aircraft. If one can, the kiosk page is the best candidate
 
 ## What could not be verified
 
-* **Aircraft numbers:** all five profiles (PMDG 737-800, PMDG 777-200ER with
-  GE90-94B / PW4090 / Trent 895 variants, iFly 737 MAX 8, Fenix A320,
-  FSLabs A321) are round PLACEHOLDER figures of roughly the right size, not
+* **Aircraft numbers:** all six profiles (PMDG 737-800, PMDG 777-200ER with
+  GE90-94B / PW4090 / Trent 895 variants, iFly 737 MAX 8, Fenix A319,
+  Fenix A320, FSLabs A321) are round PLACEHOLDER figures of roughly the right size, not
   from any manual or performance data. The 777 variants are identical until
   you edit them.
 * **FMC/MCDU page names, buttons and field labels** in all templates.

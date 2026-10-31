@@ -49,7 +49,7 @@ describe.skipIf(!ds)('real airport data: small Chinese airports', () => {
     }
   });
 
-  for (const profileId of ['pmdg-737-800', 'fenix-a320']) {
+  for (const profileId of ['pmdg-737-800', 'fenix-a320', 'fenix-a319']) {
     const profile = DEFAULT_PROFILES.find((p) => p.id === profileId)!;
     for (const [from, to] of FLIGHTS) {
       it(`${profile.name}: ${from} → ${to}`, async () => {
