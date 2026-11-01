@@ -51,7 +51,7 @@ describe('route generator', () => {
     // ~75 nm off a 600 nm track: about 3% longer, accepted.
     const wide = generateRoute(DEP, ARR, off(1.25), 'navaids');
     expect(wide.route).toBe('OFF');
-    expect(wide.note).toMatch(/up to 100 nm away/);
+    expect(wide.note).toMatch(/up to 100 nm \/ 185 km away/);
     // A closer beacon wins without widening.
     expect(generateRoute(DEP, ARR, [...off(1.25), nav('NEAR', 0.3, 5)], 'navaids').route).toBe('NEAR');
     // Too big a detour on a short flight: stays direct.

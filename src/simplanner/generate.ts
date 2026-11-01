@@ -3,6 +3,7 @@
 // from the weather fetch and the random numbers, which are injected so it can
 // be tested.
 
+import { fmtDistance } from '../lib/format';
 import { parseMetar } from '../lib/metar';
 import type { AirportIndex } from './lib/airports';
 import { generateRoute, minimumCruiseFl, pickRunway, suggestAlternates, suggestCruiseFl } from './lib/autoplan';
@@ -95,7 +96,7 @@ export async function generateFlight(
     const alts = suggestAlternates(index, arr, minRwy);
     if (alts[0]) {
       next.altn = alts[0].airport.icao;
-      notes.push(`Alternate ${alts[0].airport.icao} (${alts[0].airport.name}), ${Math.round(alts[0].distanceNm)} nm from ${arr.icao}.`);
+      notes.push(`Alternate ${alts[0].airport.icao} (${alts[0].airport.name}), ${fmtDistance(alts[0].distanceNm)} from ${arr.icao}.`);
     } else {
       next.altn = '';
       notes.push(`No alternate found within 300 nm of ${arr.icao} with a ${minRwy.toLocaleString('en-US')} ft runway; set one by hand.`);

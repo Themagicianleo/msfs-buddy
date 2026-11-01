@@ -225,7 +225,7 @@
 .navlog tr:last-child td { border-bottom: 0; }
 .navlog th:first-child, .navlog td:first-child { padding-left: 18px; }
 .navlog .fix b { font-weight: 600; }
-.navlog .fix small { display: block; color: var(--label-2); font-size: 11px; }
+.navlog .fix small, .navlog .km { display: block; color: var(--label-2); font-size: 11px; }
 .navlog .row-apt td { background: var(--blue-soft); }
 .navlog .row-apt .fix b { color: var(--blue); }
 

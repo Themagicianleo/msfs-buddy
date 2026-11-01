@@ -6,6 +6,7 @@
 
 import { distanceNm, EARTH_RADIUS_NM, initialCourseTrue, type LatLon } from './geo';
 import type { Airport, AirportIndex, Navaid, Runway } from './airports';
+import { nmToKm } from '../../lib/format';
 
 export type RouteMode = 'navaids' | 'direct' | 'manual';
 
@@ -126,7 +127,7 @@ export function generateRoute(dep: Place, arr: Place, allNavaids: Navaid[], mode
   const route = picked.length ? picked.map((n) => n.ident).join(' DCT ') : 'DCT';
   const extra = ((routeNm / directNm - 1) * 100).toFixed(1);
   const note = picked.length
-    ? `VOR-to-VOR route through ${picked.length} beacon${picked.length === 1 ? '' : 's'}, ${extra}% longer than direct${widened ? ` (no beacon within ${opts.corridorNm} nm of the track, so one up to ${opts.wideCorridorNm} nm away is used)` : ''}. Not an airway route; add the SID and STAR in the FMC.`
+    ? `VOR-to-VOR route through ${picked.length} beacon${picked.length === 1 ? '' : 's'}, ${extra}% longer than direct${widened ? ` (no beacon within ${opts.corridorNm} nm / ${Math.round(nmToKm(opts.corridorNm))} km of the track, so one up to ${opts.wideCorridorNm} nm / ${Math.round(nmToKm(opts.wideCorridorNm))} km away is used)` : ''}. Not an airway route; add the SID and STAR in the FMC.`
     : `No beacons near the track in the open data${domestic ? ` (only ${domestic} beacons are used on a domestic flight)` : ''}, so the route is direct. Add the real waypoints under Waypoints and choose "My own" for a beacon route.`;
   return { route, navaids: picked, directNm, routeNm, note };
 }

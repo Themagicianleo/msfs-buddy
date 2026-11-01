@@ -9,6 +9,7 @@
 
 import type { Airport as EfbAirport, Fix, FlightPlan } from '../../lib/simbrief';
 import type { Airport } from './airports';
+import { nmToKm } from '../../lib/format';
 import { distanceNm } from './geo';
 import { ESTIMATE_WARNING, type PlanResult } from './planning';
 import type { AircraftProfile } from './profiles';
@@ -91,8 +92,8 @@ function textOfp(x: EfbFlightInput, block: number, times: BlockTimes | null): st
     `[ SimPlanner OFP ]   ${i.flightNo || ''}   ${dep.icao}-${arr.icao}   ${profile.name}${i.variant ? ` (${i.variant})` : ''}`,
     '',
     `ROUTE: ${dep.icao}/${i.depRwy || '---'} ${route.fmcRoute || 'DCT'} ${arr.icao}/${i.arrRwy || '---'}`,
-    `DIST ${round(p.distanceNm)} NM   FL${i.cruiseFl}   CI ${i.costIndex}   AVG WIND ${i.windKt >= 0 ? 'P' : 'M'}${Math.abs(i.windKt)}`,
-    `ALTN ${altn ? `${altn.icao} ${round(p.alternateDistanceNm)} NM` : 'NONE'}`,
+    `DIST ${round(p.distanceNm)} NM / ${round(nmToKm(p.distanceNm))} KM   FL${i.cruiseFl}   CI ${i.costIndex}   AVG WIND ${i.windKt >= 0 ? 'P' : 'M'}${Math.abs(i.windKt)}`,
+    `ALTN ${altn ? `${altn.icao} ${round(p.alternateDistanceNm)} NM / ${round(nmToKm(p.alternateDistanceNm))} KM` : 'NONE'}`,
     ...(times ? [`OUT ${zulu(times.out)}   OFF ${zulu(times.off)}   ON ${zulu(times.on)}   IN ${zulu(times.in)}   (${times.out.toISOString().slice(0, 10)})`] : []),
     '',
     `FUEL (${u})       TIME`,

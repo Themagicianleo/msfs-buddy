@@ -3,6 +3,19 @@ export function fmtNum(v: number | null | undefined, digits = 0): string {
   return v.toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: digits });
 }
 
+export const KM_PER_NM = 1.852;
+
+/** Nautical miles → kilometres. */
+export function nmToKm(nm: number): number {
+  return nm * KM_PER_NM;
+}
+
+/** "333 nm · 617 km" (both rounded to whole numbers). */
+export function fmtDistance(nm: number | null | undefined): string {
+  if (nm === null || nm === undefined || !Number.isFinite(nm)) return '—';
+  return `${fmtNum(nm)} nm · ${fmtNum(nmToKm(nm))} km`;
+}
+
 /** Seconds → "H:MM". */
 export function fmtDuration(sec: number | null | undefined): string {
   if (sec === null || sec === undefined) return '—';

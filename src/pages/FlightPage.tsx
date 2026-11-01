@@ -3,7 +3,10 @@ import type { Page } from '../components/nav';
 import { CatBadge, CopyButton, Field, Panel } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { RouteMap } from '../components/RouteMap';
-import { fmtAltitude, fmtDuration, fmtNum, fmtZulu } from '../lib/format';
+import { fmtAltitude, fmtDuration, fmtNum, fmtZulu, nmToKm } from '../lib/format';
+
+/** Unit text for a distance shown in nm: "nm · 617 km". */
+const kmUnit = (nm: number | null) => (nm === null ? 'nm' : `nm · ${fmtNum(nmToKm(nm))} km`);
 import { parseMetar } from '../lib/metar';
 import { openAtcCode, openAtcLink } from '../lib/openatc';
 import { simbriefDispatchUrl, type Airport, type FlightPlan } from '../lib/simbrief';
@@ -94,7 +97,7 @@ export function FlightPage({ plan, settings, theme, state, onRefresh, onDemo, on
           <AirportBlock a={plan.destination} time={t.schedIn} timeLabel="Arrives" end />
         </div>
         <div className="boarding-meta">
-          <Field label="Distance" value={fmtNum(plan.routeDistance)} unit="nm" />
+          <Field label="Distance" value={fmtNum(plan.routeDistance)} unit={kmUnit(plan.routeDistance)} />
           <Field label="Cruise" value={fmtAltitude(plan.cruiseAlt, transAlt)} />
           <Field label="Block" value={fmtDuration(t.block)} />
           <Field label="Alternate" value={altn?.icao || '—'} />
@@ -148,7 +151,7 @@ export function FlightPage({ plan, settings, theme, state, onRefresh, onDemo, on
             <Field label="Avg wind" value={plan.avgWind || '—'} />
             <Field label="Wind comp" value={plan.avgWindComp === null ? '—' : `${plan.avgWindComp < 0 ? 'HD' : 'TL'} ${Math.abs(plan.avgWindComp)}`} />
             <Field label="Alternate" value={altn?.icao || '—'} />
-            <Field label="Air distance" value={fmtNum(plan.airDistance)} unit="NM" />
+            <Field label="Air distance" value={fmtNum(plan.airDistance)} unit={kmUnit(plan.airDistance)} />
           </div>
         </Panel>
         <Panel title="Route" right={<button className="link" onClick={() => onGoto('map')}>Map ›</button>}>

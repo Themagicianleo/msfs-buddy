@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { fmtDistance } from '../../lib/format';
 import { CopyButton, EstimateBanner, Kv, Section, Warnings } from '../components/ui';
 import { formatTaf } from '../../lib/metar';
 import { fmtHm, fmtWeight } from '../lib/units';
@@ -84,7 +85,7 @@ export function BriefingPage() {
             ['Departure', `${inputs.dep} ${dep?.name ?? ''} · RWY ${inputs.depRwy || '—'}`],
             ['Arrival', `${inputs.arr} ${arr?.name ?? ''} · RWY ${inputs.arrRwy || '—'}`],
             ['Alternate', inputs.altn ? `${inputs.altn} ${altn?.name ?? ''}` : 'none'],
-            ['Distance (route, great circle)', `${fmtWeight(plan.distanceNm)} nm`],
+            ['Distance (route, great circle)', fmtDistance(plan.distanceNm)],
             ['Estimated trip time', fmtHm(plan.tripTimeMin)],
           ]}
         />

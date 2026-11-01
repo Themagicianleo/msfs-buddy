@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CopyButton, NoPlan, Panel, Tabs } from '../components/ui';
-import { fmtDuration, fmtNum } from '../lib/format';
+import { fmtDuration, fmtNum, nmToKm } from '../lib/format';
 import type { FlightPlan } from '../lib/simbrief';
 import { openAtcCode, openAtcLink, toOpenAtcPlan } from '../lib/openatc';
 import type { Settings } from '../lib/storage';
@@ -85,8 +85,8 @@ function Navlog({ plan }: { plan: FlightPlan }) {
             <th>Wind</th>
             <th>OAT</th>
             <th>TAS/GS</th>
-            <th>Leg</th>
-            <th>Total</th>
+            <th>Leg<br /><small>NM / km</small></th>
+            <th>Total<br /><small>NM / km</small></th>
             <th>ETE</th>
             <th>Fuel rem<br /><small>{u} ×1000</small></th>
             <th>Freq</th>
@@ -105,8 +105,8 @@ function Navlog({ plan }: { plan: FlightPlan }) {
               <td>{f.windDir === null ? '' : `${String(Math.round(f.windDir)).padStart(3, '0')}/${f.windSpd}`}</td>
               <td>{f.oat ?? ''}</td>
               <td>{f.tas ? `${f.tas}/${f.gs ?? ''}` : ''}</td>
-              <td>{fmtNum(f.legDistance)}</td>
-              <td>{fmtNum(f.totalDistance)}</td>
+              <td>{fmtNum(f.legDistance)}{f.legDistance !== null && <small className="km">{fmtNum(nmToKm(f.legDistance))} km</small>}</td>
+              <td>{fmtNum(f.totalDistance)}{f.totalDistance !== null && <small className="km">{fmtNum(nmToKm(f.totalDistance))} km</small>}</td>
               <td>{fmtDuration(f.totalTime)}</td>
               <td>{f.fuelOnboard === null ? '' : (f.fuelOnboard / wtDiv).toFixed(1)}</td>
               <td className="muted">{f.frequency}</td>

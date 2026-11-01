@@ -72,7 +72,7 @@
     for (var j = 0; j < bad.length; j++) h += '<div class="bad">LIMIT EXCEEDED: ' + esc(bad[j].name) + ' ' + num(bad[j].value) + ' &gt; ' + num(bad[j].limit) + ' ' + esc(bad[j].unit) + '</div>';
 
     h += '<h2>Route</h2><div class="route">' + esc(d.route) + '</div>';
-    h += '<div class="muted">' + num(d.distanceNm) + ' nm · ' + hm(d.tripMin) + ' · RWY ' + esc(d.depRwy || '—') + ' / ' + esc(d.arrRwy || '—') + '</div>';
+    h += '<div class="muted">' + num(d.distanceNm) + ' nm / ' + num(d.distanceNm * 1.852) + ' km · ' + hm(d.tripMin) + ' · RWY ' + esc(d.depRwy || '—') + ' / ' + esc(d.arrRwy || '—') + '</div>';
 
     var f = d.fuel;
     h += '<h2>Fuel (' + u + ')</h2><table>';

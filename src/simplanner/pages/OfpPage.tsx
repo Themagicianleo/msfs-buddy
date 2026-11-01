@@ -10,6 +10,7 @@ import type { RoutePoint } from '../lib/route';
 import { BriefingPage, WeatherSection } from './BriefingPage';
 import { describeLoad, fitPayload, randomPayload } from '../lib/payload';
 import { toEfbPlan } from '../lib/efb';
+import { fmtDistance, nmToKm } from '../../lib/format';
 import { blockTimes, zulu } from '../lib/times';
 import { save as saveEfb } from '../../lib/storage';
 
@@ -59,7 +60,7 @@ export function OfpPage() {
           <div className="ofp-mid">
             <div className="muted">{inputs.flightNo || 'Flight'} · {profile.name}{inputs.variant ? ` (${inputs.variant})` : ''}</div>
             <div className="ofp-line">✈</div>
-            <div>{fmtWeight(plan.distanceNm)} nm · {fmtHm(plan.tripTimeMin)} · FL{inputs.cruiseFl}</div>
+            <div>{fmtDistance(plan.distanceNm)} · {fmtHm(plan.tripTimeMin)} · FL{inputs.cruiseFl}</div>
             {times && <div className="muted">OUT {zulu(times.out)} · IN {zulu(times.in)}</div>}
           </div>
           <div className="right">
@@ -156,7 +157,7 @@ export function OfpPage() {
                 ['Taxi', fmtWeight(plan.fuel.taxi)],
                 [`Trip (${fmtHm(plan.tripTimeMin)})`, fmtWeight(plan.fuel.trip)],
                 [`Contingency (${inputs.contingencyPct}%)`, fmtWeight(plan.fuel.contingency)],
-                [`Alternate ${altn ? altn.icao + ' (' + fmtWeight(plan.alternateDistanceNm) + ' nm)' : ''}`, fmtWeight(plan.fuel.alternate)],
+                [`Alternate ${altn ? `${altn.icao} (${fmtDistance(plan.alternateDistanceNm)})` : ''}`, fmtWeight(plan.fuel.alternate)],
                 [`Final reserve (${inputs.reserveMin} min)`, fmtWeight(plan.fuel.reserve)],
                 ['Extra', fmtWeight(plan.fuel.extra)],
                 ['BLOCK FUEL', <b key="b">{fmtWeight(plan.fuel.block)}</b>],
@@ -246,8 +247,8 @@ export function LegsTable() {
             <th>Type</th>
             <th>Via</th>
             <th className="num">Course °T</th>
-            <th className="num">Leg nm</th>
-            <th className="num">Total nm</th>
+            <th className="num">Leg nm<div className="small-text">km</div></th>
+            <th className="num">Total nm<div className="small-text">km</div></th>
           </tr>
         </thead>
         <tbody>
@@ -259,8 +260,8 @@ export function LegsTable() {
                 <td>{l.to.type.toUpperCase()}</td>
                 <td className="mono">{l.via}</td>
                 <td className="num">{String(Math.round(l.courseTrue) % 360).padStart(3, '0')}</td>
-                <td className="num">{Math.round(l.distanceNm)}</td>
-                <td className="num">{Math.round(cum)}</td>
+                <td className="num">{Math.round(l.distanceNm)}<div className="muted small-text">{Math.round(nmToKm(l.distanceNm))}</div></td>
+                <td className="num">{Math.round(cum)}<div className="muted small-text">{Math.round(nmToKm(cum))}</div></td>
               </tr>
             );
           })}

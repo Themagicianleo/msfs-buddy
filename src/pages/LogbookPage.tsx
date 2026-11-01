@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Field, Panel } from '../components/ui';
-import { fmtNum, fmtZulu } from '../lib/format';
+import { fmtNum, fmtZulu, nmToKm } from '../lib/format';
 import {
   NETWORKS,
   airMinutes,
@@ -128,7 +128,7 @@ export function LogbookPage({ plan }: { plan: FlightPlan | null; settings: Setti
         <Panel><Field label="Flights" value={totals.flights} accent /></Panel>
         <Panel><Field label="Block time" value={fmtMinutes(totals.blockMinutes)} unit="h" /></Panel>
         <Panel><Field label="Air time" value={fmtMinutes(totals.airMinutes)} unit="h" /></Panel>
-        <Panel><Field label="Distance" value={fmtNum(totals.distance)} unit="NM" /></Panel>
+        <Panel><Field label="Distance" value={fmtNum(totals.distance)} unit={`NM · ${fmtNum(nmToKm(totals.distance ?? 0))} km`} /></Panel>
         <Panel><Field label="Avg landing" value={totals.avgLandingRate === null ? '—' : `-${totals.avgLandingRate}`} unit="fpm" /></Panel>
         <Panel><Field label="Most flown" value={totals.topAircraft || '—'} /></Panel>
       </div>
