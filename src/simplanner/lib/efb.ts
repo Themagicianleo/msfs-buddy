@@ -21,6 +21,7 @@ import { blockTimes, zulu, type BlockTimes } from './times';
 const TYPE_CODES: Record<string, string> = {
   'fenix-a319': 'A319',
   'fenix-a320': 'A320',
+  'fenix-a321': 'A321',
   'fslabs-a321': 'A321',
   'ifly-737-max8': 'B38M',
   'pmdg-737-800': 'B738',

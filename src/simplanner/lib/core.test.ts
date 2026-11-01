@@ -220,7 +220,7 @@ describe('planning model', () => {
 
 describe('profiles', () => {
   it('ships the requested profiles, all unverified and valid', () => {
-    expect(DEFAULT_PROFILES.map((p) => p.id).sort()).toEqual(['fenix-a319', 'fenix-a320', 'fslabs-a321', 'ifly-737-max8', 'pmdg-737-800', 'pmdg-777-200er']);
+    expect(DEFAULT_PROFILES.map((p) => p.id).sort()).toEqual(['fenix-a319', 'fenix-a320', 'fenix-a321', 'fslabs-a321', 'ifly-737-max8', 'pmdg-737-800', 'pmdg-777-200er']);
     for (const p of DEFAULT_PROFILES) {
       expect(p.verified).toBe(false);
       expect(p.placeholderNotice).toMatch(/PLACEHOLDER/);
