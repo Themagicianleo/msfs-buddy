@@ -8,4 +8,4 @@ When available, VOR/NDB beacons from openAIP (https://www.openaip.net) are
 merged in. openAIP data is licensed CC BY-NC 4.0 (non-commercial use, with
 attribution).
 
-Last update: 2026-10-26. Rebuilt by `scripts/build-airport-data.ts`.
+Last update: 2026-11-01. Rebuilt by `scripts/build-airport-data.ts`.
