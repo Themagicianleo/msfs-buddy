@@ -208,13 +208,20 @@ export function AircraftPage() {
   const idClash = !errors.length && p.id !== profile.id && app.profiles.some((x) => x.id === p.id);
   if (idClash) errors.push(`Another profile already uses the id "${p.id}".`);
 
-  const save = () => {
+  const storeProfile = (q: AircraftProfile) => {
     const next = { ...app.store.profiles };
-    if (p.id !== profile.id && !isDefault) delete next[profile.id];
-    next[p.id] = p;
+    if (q.id !== profile.id && !isDefault) delete next[profile.id];
+    next[q.id] = q;
     app.update('profiles', next);
-    setId(p.id);
+    setId(q.id);
   };
+  const save = () => storeProfile(p);
+
+  // The form edits a copy; Save stores it.
+  const [draft, setDraft] = useState<AircraftProfile>(profile);
+  useEffect(() => setDraft(profile), [profile]);
+  const formErrors = validateProfile(draft);
+  const formDirty = JSON.stringify(draft) !== JSON.stringify(profile);
 
   const [tplId, setTplId] = useState(profile.fmcTemplate);
   const [tplText, setTplText] = useState(app.templates[tplId] ?? '');
@@ -235,18 +242,27 @@ export function AircraftPage() {
           }}>Duplicate</button>
         </div>
         {!profile.verified && <div className="banner banner-warn">{profile.placeholderNotice}</div>}
-        <p className="muted" style={{ marginTop: 0 }}>
-          Weights in <b>{profile.units}</b>. Burn figures are per hour. Set <code>"verified": true</code> once you have checked every number
-          against the aircraft&apos;s manual or in-sim performance tool. <code>variants</code> overrides the performance block for engine options.
-        </p>
-        <textarea className="input code" value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
-        {errors.length > 0 && <ul className="warnings">{errors.map((e) => <li key={e} className="danger">{e}</li>)}</ul>}
-        <div className="row" style={{ marginTop: 10 }}>
-          <button className="btn btn-primary" disabled={errors.length > 0} onClick={save}>Save profile</button>
+        <ProfileForm draft={draft} onChange={setDraft} />
+        {formErrors.length > 0 && <ul className="warnings">{formErrors.map((e) => <li key={e} className="danger">{e}</li>)}</ul>}
+        <div className="row" style={{ marginTop: 14 }}>
+          <button className="btn btn-primary" disabled={formErrors.length > 0 || !formDirty} onClick={() => storeProfile(draft)}>Save profile</button>
+          {formDirty && <button className="btn" onClick={() => setDraft(profile)}>Undo changes</button>}
           {isDefault && edited && <button className="btn" onClick={() => { const next = { ...app.store.profiles }; delete next[profile.id]; app.update('profiles', next); }}>Reset to shipped placeholder</button>}
           {!isDefault && <button className="btn btn-danger" onClick={() => { if (!confirm(`Delete ${profile.name}?`)) return; const next = { ...app.store.profiles }; delete next[profile.id]; app.update('profiles', next); setId(DEFAULT_PROFILES[0].id); }}>Delete profile</button>}
           <button className="btn" onClick={() => download(`${profile.id}.json`, JSON.stringify(profile, null, 2), 'application/json')}>Download JSON</button>
         </div>
+        <details className="advanced">
+          <summary>Advanced: edit as JSON (engine variants, id, notes)</summary>
+          <p className="muted">
+            The whole profile as text, including fields the form doesn&apos;t show. <code>variants</code> override the performance figures
+            for each engine option.
+          </p>
+          <textarea className="input code" value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
+          {errors.length > 0 && <ul className="warnings">{errors.map((e) => <li key={e} className="danger">{e}</li>)}</ul>}
+          <div className="row" style={{ marginTop: 10 }}>
+            <button className="btn" disabled={errors.length > 0} onClick={save}>Save JSON</button>
+          </div>
+        </details>
       </Section>
 
       <Section title="FMC cheat-sheet template">
@@ -357,7 +373,7 @@ export function SettingsPage() {
 
       <Section title="About the numbers">
         <ul>
-          <li>Aircraft profiles ship with PLACEHOLDER values. Check every number and set <code>verified</code> to true.</li>
+          <li>Aircraft profiles ship with PLACEHOLDER values. Replace them on the Aircraft page and tick “I&apos;ve checked these values”.</li>
           <li>FMC page names and button labels are UNVERIFIED until you confirm them and edit the template.</li>
           <li>Fuel and weights are estimates from a simple model (formulas shown on the Plan page). Not certified data. Simulation only.</li>
           <li>No navdata is included. Airways are flown direct between fixes; SIDs and STARs are not modelled.</li>
@@ -471,5 +487,126 @@ function AirwaysSection() {
         Re-import after MSFS updates its navdata.
       </p>
     </Section>
+  );
+}
+
+// ---------------- Aircraft profile form ----------------
+
+type NumberPath = string;
+interface FormField {
+  path: NumberPath;
+  label: string;
+  unit: string;
+  hint: string;
+  step?: number;
+}
+
+function getPath(o: unknown, path: string): number {
+  const v = path.split('.').reduce<unknown>((acc, k) => (acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[k] : undefined), o);
+  return typeof v === 'number' ? v : 0;
+}
+
+function setPath<T>(o: T, path: string, value: number): T {
+  const [head, ...rest] = path.split('.');
+  const obj = o as Record<string, unknown>;
+  return { ...obj, [head]: rest.length ? setPath(obj[head] ?? {}, rest.join('.'), value) : value } as T;
+}
+
+function formGroups(w: string): { title: string; note?: string; fields: FormField[] }[] {
+  return [
+    {
+      title: 'Weights',
+      note: 'From the aircraft’s EFB (weight & balance / loadsheet page) or its documentation.',
+      fields: [
+        { path: 'weights.oew', label: 'Operating empty weight (OEW)', unit: w, hint: 'Empty aircraft ready to fly, no passengers, cargo or fuel.' },
+        { path: 'weights.mzfw', label: 'Max zero fuel weight', unit: w, hint: 'MZFW' },
+        { path: 'weights.mtow', label: 'Max takeoff weight', unit: w, hint: 'MTOW' },
+        { path: 'weights.mlw', label: 'Max landing weight', unit: w, hint: 'MLW' },
+        { path: 'weights.maxFuel', label: 'Fuel capacity', unit: w, hint: 'All tanks, by weight.' },
+      ],
+    },
+    {
+      title: 'Load',
+      fields: [
+        { path: 'capacity.maxPax', label: 'Seats', unit: 'pax', hint: 'For the cabin layout you fly.' },
+        { path: 'capacity.maxCargo', label: 'Max cargo', unit: w, hint: 'Hold limit used for random loads.' },
+        { path: 'defaults.paxWeight', label: 'Weight per passenger', unit: w, hint: 'Including bags (often 84 kg / 185 lb).' },
+      ],
+    },
+    {
+      title: 'Fuel burn per hour',
+      note: 'Total fuel flow of both engines in each phase. Easiest: fly one normal flight and read FF on the engine display (ECAM / EICAS) once each phase has settled.',
+      fields: [
+        { path: 'performance.burnPerHour.taxi', label: 'Taxi', unit: `${w}/h`, hint: '' },
+        { path: 'performance.burnPerHour.climb', label: 'Climb', unit: `${w}/h`, hint: 'Average from takeoff to cruise.' },
+        { path: 'performance.burnPerHour.cruise', label: 'Cruise', unit: `${w}/h`, hint: 'At your usual cruise level.' },
+        { path: 'performance.burnPerHour.descent', label: 'Descent', unit: `${w}/h`, hint: '' },
+        { path: 'performance.burnPerHour.holding', label: 'Holding', unit: `${w}/h`, hint: 'Used for the final reserve.' },
+      ],
+    },
+    {
+      title: 'Speeds and climb',
+      fields: [
+        { path: 'performance.cruiseTasKt', label: 'Cruise true airspeed', unit: 'kt', hint: 'TAS on the ND in cruise.' },
+        { path: 'performance.climbRateFpm', label: 'Average climb rate', unit: 'ft/min', hint: 'Takeoff to cruise level.' },
+        { path: 'performance.climbSpeedKt', label: 'Average climb ground speed', unit: 'kt', hint: '' },
+        { path: 'performance.descentNmPer1000ft', label: 'Descent distance per 1,000 ft', unit: 'nm', hint: '3 is the usual rule of thumb.', step: 0.1 },
+        { path: 'performance.descentSpeedKt', label: 'Average descent ground speed', unit: 'kt', hint: '' },
+      ],
+    },
+    {
+      title: 'Defaults and reserves',
+      fields: [
+        { path: 'defaults.cruiseFl', label: 'Highest usual cruise level', unit: 'FL', hint: 'Generate never plans above this.' },
+        { path: 'defaults.costIndex', label: 'Cost index', unit: '', hint: '' },
+        { path: 'defaults.taxiMinutes', label: 'Taxi time each way', unit: 'min', hint: 'Also used for block times.' },
+        { path: 'defaults.minRunwayFt', label: 'Shortest runway you accept', unit: 'ft', hint: 'For alternates and runway warnings.' },
+        { path: 'reserves.contingencyPct', label: 'Contingency', unit: '% of trip', hint: '', step: 0.5 },
+        { path: 'reserves.minContingencyMin', label: 'Minimum contingency', unit: 'min', hint: '' },
+        { path: 'reserves.finalReserveMin', label: 'Final reserve', unit: 'min', hint: 'Holding fuel, e.g. 30 min.' },
+        { path: 'reserves.alternateCruiseFl', label: 'Cruise level to the alternate', unit: 'FL', hint: '' },
+      ],
+    },
+  ];
+}
+
+/** Every number of a profile as labelled boxes, plus the "checked" switch. */
+function ProfileForm({ draft, onChange }: { draft: AircraftProfile; onChange: (p: AircraftProfile) => void }) {
+  const w = draft.units;
+  return (
+    <div className="profile-form">
+      <div className="form-grid">
+        <Field label="Name"><TextInput value={draft.name} onChange={(v) => onChange({ ...draft, name: v })} /></Field>
+        <Field label="Weight units" hint="Changing this doesn’t convert the numbers: enter them in these units.">
+          <select className="input" value={draft.units} onChange={(e) => onChange({ ...draft, units: e.target.value as 'kg' | 'lb' })}>
+            <option value="kg">kg</option>
+            <option value="lb">lb</option>
+          </select>
+        </Field>
+      </div>
+      {formGroups(w).map((g) => (
+        <div key={g.title} className="profile-group">
+          <h3>{g.title}</h3>
+          {g.note && <p className="field-hint" style={{ marginTop: 0 }}>{g.note}</p>}
+          <div className="form-grid">
+            {g.fields.map((f) => (
+              <Field key={f.path} label={f.unit ? `${f.label} (${f.unit})` : f.label} hint={f.hint || undefined}>
+                <NumberInput value={getPath(draft, f.path)} step={f.step} min={0} onChange={(v) => onChange(setPath(draft, f.path, v))} />
+              </Field>
+            ))}
+          </div>
+        </div>
+      ))}
+      {draft.variants && (
+        <p className="banner banner-info">
+          This aircraft has engine options ({Object.keys(draft.variants).join(', ')}) whose figures replace the speeds and fuel burns above when
+          selected on Dispatch. Edit those under Advanced.
+        </p>
+      )}
+      <label className="check verified-check">
+        <input type="checkbox" checked={draft.verified} onChange={(e) => onChange({ ...draft, verified: e.target.checked })} />
+        I&apos;ve checked these values against the aircraft (removes the placeholder warning)
+      </label>
+    </div>
   );
 }

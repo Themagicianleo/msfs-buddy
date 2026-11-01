@@ -4,7 +4,7 @@
   "fmcTemplate": "airbus-a320",
   "units": "kg",
   "verified": false,
-  "placeholderNotice": "PLACEHOLDER VALUES. These are round numbers of roughly the right size for the type, NOT taken from any manual or the aircraft's performance data. Check every number against the aircraft's documentation or its in-sim performance tool, then set \"verified\" to true.",
+  "placeholderNotice": "PLACEHOLDER VALUES. These are round numbers of roughly the right size for the type, NOT taken from any manual or the aircraft's performance data. Check every number against the aircraft's documentation or its in-sim performance tool, then tick \"I've checked these values\" on the Aircraft page.",
   "weights": {
     "oew": 48500,
     "mtow": 93500,

@@ -47,8 +47,9 @@ server, no telemetry. Your data never leaves the device unless you export it.
    times, fuel and altitudes are spread from the estimates. The EFB
    keeps it until you press its refresh button, which fetches SimBrief again.
 
-Before trusting the numbers, check your aircraft profile on the **Aircraft**
-page and set `"verified": true`.
+Before trusting the numbers, open your aircraft on the **Aircraft** page,
+replace the placeholder figures in the form (weights, seats, fuel burns,
+speeds, reserves) and tick **I've checked these values**.
 
 ## How routes are generated
 
