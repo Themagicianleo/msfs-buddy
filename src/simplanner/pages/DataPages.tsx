@@ -9,6 +9,7 @@ import { parseWaypointCsv, type CustomWaypoint } from '../lib/navdata';
 import { DEFAULT_PROFILES, validateProfile, type AircraftProfile } from '../lib/profiles';
 import { download, makeBackup, mergeBackup } from '../lib/store';
 import { useApp } from '../state';
+import { fmtFtM } from '../../lib/format';
 
 // ---------------- Airports ----------------
 
@@ -54,7 +55,7 @@ export function AirportsPage() {
             <div>
               <b className="mono">{a.icao}</b> {a.name}
               <div className="muted">
-                {a.lat.toFixed(4)}, {a.lon.toFixed(4)} · {a.elevationFt ?? '—'} ft · RWY {a.runways.map((r) => r.ident).join(' ') || '—'}
+                {a.lat.toFixed(4)}, {a.lon.toFixed(4)} · {fmtFtM(a.elevationFt)} · RWY {a.runways.map((r) => r.ident).join(' ') || '—'}
               </div>
             </div>
             <div className="row">
@@ -72,7 +73,7 @@ export function AirportsPage() {
             <div>
               <b className="mono">{a.icao}</b> {a.name} {a.source === 'custom' && <b>(mine)</b>}
               <div className="muted">
-                {[a.city, a.country].filter(Boolean).join(', ')} · {a.lat.toFixed(4)}, {a.lon.toFixed(4)} · {a.elevationFt ?? '—'} ft
+                {[a.city, a.country].filter(Boolean).join(', ')} · {a.lat.toFixed(4)}, {a.lon.toFixed(4)} · {fmtFtM(a.elevationFt)}
               </div>
               <div className="muted">
                 {a.runways.map((r) => `${r.ident} ${r.lengthFt ? r.lengthFt.toLocaleString('en-US') + ' ft' : ''} ${r.headingDeg !== null ? Math.round(r.headingDeg) + '°' : ''}`).join(' · ') || 'No runways'}

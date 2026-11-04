@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Terrain3D } from './Terrain3D';
 import { Panel, Tabs } from './ui';
-import { fmtNum, nmKm, nmToKm } from '../lib/format';
+import { fmtFtM, fmtNum, nmKm, nmToKm } from '../lib/format';
 import type { Airport, FlightPlan } from '../lib/simbrief';
 import {
   APPROACH_NM, BEARING_STEP, RADIUS_NM, RING_STEP_NM, cacheTerrain, cachedTerrain, compass, glidePathFt, loadTerrain, mToFt, summarize,
@@ -10,7 +10,8 @@ import {
 
 type Which = 'destination' | 'origin' | 'alternate';
 
-const ft = (v: number) => `${fmtNum(v)} ft`;
+const ft = (v: number) => fmtFtM(Math.round(v));
+const aboveField = (v: number) => `+${fmtFtM(Math.round(v))} above field`;
 const where = (p: { distNm: number; brg: number }) =>
   `${fmtNum(p.distNm, p.distNm < 10 ? 1 : 0)} nm / ${fmtNum(nmToKm(p.distNm))} km ${compass(p.brg)} (${String(Math.round(p.brg)).padStart(3, '0')}°)`;
 
@@ -169,7 +170,7 @@ function HighPanel({ title, p, field }: { title: string; p: TerrainPoint; field:
   const above = p.elevFt - field;
   return (
     <Panel title={title}>
-      <div className="field-value">{ft(p.elevFt)} <small className={above > 2000 ? 'warn' : ''}>{above > 0 ? `+${fmtNum(above)} ft above field` : 'at or below field'}</small></div>
+      <div className="field-value">{ft(p.elevFt)} <small className={above > 2000 ? 'warn' : ''}>{above > 0 ? aboveField(above) : 'at or below field'}</small></div>
       <div className="muted small">{[p.distNm > 0 ? where(p) : '', p.name ?? ''].filter(Boolean).join(' · ') || 'At the field'}</div>
     </Panel>
   );
@@ -184,7 +185,7 @@ function FeatureTable({ rows, showEle, field }: { rows: GeoFeature[]; showEle: b
             <td>{f.name}<br /><small>{where(f)}</small></td>
             <td>
               {showEle && f.eleM !== null ? (
-                <>{ft(mToFt(f.eleM))}<br /><small>{mToFt(f.eleM) > field ? `+${fmtNum(mToFt(f.eleM) - field)} ft above field` : ''}</small></>
+                <>{ft(mToFt(f.eleM))}<br /><small>{mToFt(f.eleM) > field ? aboveField(mToFt(f.eleM) - field) : ''}</small></>
               ) : ''}
             </td>
           </tr>

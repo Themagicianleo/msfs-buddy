@@ -2,6 +2,7 @@
 // computed from the current flight inputs.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { fmtFtM } from '../lib/format';
 import { AirportIndex, type Airport, type AirportDataset } from './lib/airports';
 import { DEFAULT_TEMPLATES, renderTemplate, templateVars } from './lib/fmc';
 import { distanceNm } from './lib/geo';
@@ -218,7 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         plan.warnings.unshift(`${role} ${a.icao}: ${which} is ${len.toLocaleString('en-US')} ft, shorter than the ${minRwy.toLocaleString('en-US')} ft this aircraft profile needs.`);
       }
       if (!a.runways.length) plan.warnings.push(`${role} ${a.icao}: no runway data. Check the runway length yourself.`);
-      if ((a.elevationFt ?? 0) >= 8000) plan.warnings.push(`${role} ${a.icao} is a high-elevation airport (${Math.round(a.elevationFt!).toLocaleString('en-US')} ft): takeoff/landing performance and weight limits there are much tighter. Check with the aircraft's own performance tool.`);
+      if ((a.elevationFt ?? 0) >= 8000) plan.warnings.push(`${role} ${a.icao} is a high-elevation airport (${fmtFtM(Math.round(a.elevationFt!))}): takeoff/landing performance and weight limits there are much tighter. Check with the aircraft's own performance tool.`);
     }
     if (inputs.altn && !altn) plan.warnings.push(`Alternate ${inputs.altn.toUpperCase()} not found: alternate fuel is 0.`);
     const fmcText = renderTemplate(templates[profile.fmcTemplate] ?? `No FMC template "${profile.fmcTemplate}".`, templateVars(inputs, plan, route, profile.name));

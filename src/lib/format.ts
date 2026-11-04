@@ -10,6 +10,12 @@ export function nmToKm(nm: number): number {
   return nm * KM_PER_NM;
 }
 
+/** A height or elevation: "14,472 ft · 4,411 m". */
+export function fmtFtM(ft: number | null | undefined): string {
+  if (ft === null || ft === undefined || !Number.isFinite(ft)) return '—';
+  return `${fmtNum(ft)} ft · ${fmtNum(ft * 0.3048)} m`;
+}
+
 /** "2.5 nm / 4.6 km": a distance in a label or note (keeps up to one decimal). */
 export function nmKm(nm: number): string {
   const one = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? fmtNum(v) : fmtNum(v, 1));

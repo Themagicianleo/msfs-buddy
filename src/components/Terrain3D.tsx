@@ -4,7 +4,7 @@
 // zoom. three.js is loaded only when the view is first shown.
 
 import { useEffect, useRef, useState } from 'react';
-import { fmtNum, nmKm } from '../lib/format';
+import { fmtFtM, nmKm } from '../lib/format';
 import {
   APPROACH_NM, cacheTerrain3D, cachedTerrain3D, glidePathFt, loadTerrain3D, mToFt, terrainColor,
   type GeoFeature, type Terrain3D as Grid, type TerrainData,
@@ -177,7 +177,7 @@ async function draw(el: HTMLElement, g: Grid, d: TerrainData, peaks: GeoFeature[
     o.position.copy(p);
     scene.add(o);
   };
-  label(`${d.icao} ${fmtNum(field)} ft`, 'apt', new THREE.Vector3(0, 0.9, 0));
+  label(`${d.icao} ${fmtFtM(field)}`, 'apt', new THREE.Vector3(0, 0.9, 0));
   label('N', 'north', new THREE.Vector3(0, minY + 0.4, -g.halfNm - 1.2));
 
   // Peaks inside the model, with a small marker and their height.
@@ -189,7 +189,7 @@ async function draw(el: HTMLElement, g: Grid, d: TerrainData, peaks: GeoFeature[
     const cone = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.4, 12), new THREE.MeshStandardMaterial({ color: 0x1c1c1e }));
     cone.position.copy(v).setY(v.y + 0.2);
     scene.add(cone);
-    label(`${p.name} ${fmtNum(ft)} ft`, 'peak', v.clone().setY(v.y + 0.75));
+    label(`${p.name} ${fmtFtM(Math.round(ft))}`, 'peak', v.clone().setY(v.y + 0.75));
   }
 
   const controls = new OrbitControls(camera, renderer.domElement);
