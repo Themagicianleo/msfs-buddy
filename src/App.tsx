@@ -5,6 +5,7 @@ import { AppShell, ClockCapsule } from './shared/AppShell';
 import { FlightPage } from './pages/FlightPage';
 import { OfpPage } from './pages/OfpPage';
 import { MapPage } from './pages/MapPage';
+import { TerrainPage } from './pages/TerrainPage';
 import { WeatherPage } from './pages/WeatherPage';
 import { ChartsPage } from './pages/ChartsPage';
 import { PerfPage } from './pages/PerfPage';
@@ -100,6 +101,7 @@ export default function App() {
       )}
       {page === 'ofp' && <OfpPage {...common} />}
       {page === 'map' && <MapPage {...common} />}
+      {page === 'terrain' && <TerrainPage {...common} />}
       {page === 'weather' && <WeatherPage {...common} />}
       {page === 'charts' && <ChartsPage {...common} />}
       {page === 'perf' && <PerfPage {...common} />}

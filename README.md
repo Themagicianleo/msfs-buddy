@@ -18,6 +18,7 @@ subscription needed.
 | **Flight** | Departure/arrival with planned runways and flight category, block times, fuel, weights, route |
 | **OFP** | Full SimBrief OFP, the navlog table, and the ATC route / ICAO flight plan with copy buttons (handy for the MCDU) |
 | **Map** | Route on a dark map, with waypoints and the alternate |
+| **Terrain** | For the arrival, departure or alternate: field elevation, highest ground within 10 and 25 nm (height, distance, bearing), a north-up terrain map coloured by height above the field, highest terrain + 1,000 ft per quadrant (not the chart MSA), the ground under the final approach against a 3° path, and nearby summits, passes, lakes and towns. Ground heights: Copernicus DEM via Open-Meteo; features: © OpenStreetMap contributors. Cached 30 days per airport. Situational awareness only |
 | **Weather** | Live METAR and TAF for DEP/ARR/ALTN plus any airport you add, decoded (wind, visibility, ceiling, QNH in hPa and inHg), flight category, headwind/crosswind for your runway. Refreshes every 5 minutes |
 | **Charts** | ChartFox links for each airport, with the SID/STAR/runway to look for and a pop-out window to keep beside the sim |
 | **Perf** | SimBrief takeoff/landing performance (V-speeds, FLEX, flaps) when you enable it in SimBrief, plus a takeoff card you fill in |

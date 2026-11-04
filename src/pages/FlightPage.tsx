@@ -165,6 +165,7 @@ export function FlightPage({ plan, settings, theme, state, onRefresh, onDemo, on
       <div className="quick-row">
         <button className="btn" onClick={() => onGoto('weather')}>Weather</button>
         <button className="btn" onClick={() => onGoto('charts')}>Charts (ChartFox)</button>
+        <button className="btn" onClick={() => onGoto('terrain')}>Terrain at {plan.destination.icao}</button>
         <button className="btn" onClick={() => onGoto('ofp')}>Full OFP</button>
         {openAtcLink(settings.openAtcUrl, plan) ? (
           <a className="btn" href={openAtcLink(settings.openAtcUrl, plan)!} target="_blank" rel="noreferrer">Open in OpenATC</a>
