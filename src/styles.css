@@ -350,6 +350,21 @@
 @media (max-width: 600px) { .approach-profile .axis-label { font-size: 22px; } .terrain-rose .ring-label, .terrain-rose .peak-label { font-size: 11px; } }
 .terrain .kv small { color: var(--muted); font-weight: 400; }
 
+/* ---------- 3D terrain ---------- */
+.terrain3d { display: flex; flex-direction: column; gap: 12px; }
+.terrain3d-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+.terrain3d-view {
+  position: relative; height: clamp(320px, 52vw, 520px); border-radius: 20px; overflow: hidden; touch-action: none;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(120,170,255,.35), transparent 60%), linear-gradient(180deg, rgba(90,140,230,.18), rgba(0,0,0,0) 70%), var(--fill);
+}
+.terrain3d-view canvas { display: block; }
+.terrain3d-labels { position: absolute; inset: 0; pointer-events: none; }
+.terrain3d-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; text-align: center; color: var(--muted); font-size: 15px; }
+.t3d-label { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; color: var(--fg);
+  background: var(--sheet); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.t3d-label.apt { color: #fff; background: var(--blue); }
+.t3d-label.north { font-size: 13px; font-weight: 800; background: none; box-shadow: none; color: var(--fg); }
+
 /* ---------- Charts ---------- */
 .chart-card { padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
 .chart-head { display: flex; align-items: center; gap: 10px; }

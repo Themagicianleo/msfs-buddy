@@ -99,7 +99,7 @@ export async function generateFlight(
       notes.push(`Alternate ${alts[0].airport.icao} (${alts[0].airport.name}), ${fmtDistance(alts[0].distanceNm)} from ${arr.icao}.`);
     } else {
       next.altn = '';
-      notes.push(`No alternate found within 300 nm of ${arr.icao} with a ${minRwy.toLocaleString('en-US')} ft runway; set one by hand.`);
+      notes.push(`No alternate found within ${fmtDistance(300)} of ${arr.icao} with a ${minRwy.toLocaleString('en-US')} ft runway; set one by hand.`);
     }
   }
 

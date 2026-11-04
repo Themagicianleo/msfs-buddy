@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Terrain3D } from './Terrain3D';
 import { Panel, Tabs } from './ui';
-import { fmtNum, nmToKm } from '../lib/format';
+import { fmtNum, nmKm, nmToKm } from '../lib/format';
 import type { Airport, FlightPlan } from '../lib/simbrief';
 import {
   APPROACH_NM, BEARING_STEP, RADIUS_NM, RING_STEP_NM, cacheTerrain, cachedTerrain, compass, glidePathFt, loadTerrain, mToFt, summarize,
@@ -10,7 +11,6 @@ import {
 type Which = 'destination' | 'origin' | 'alternate';
 
 const ft = (v: number) => `${fmtNum(v)} ft`;
-const ftM = (v: number) => `${fmtNum(v)} ft · ${fmtNum(v / 3.28084)} m`;
 const where = (p: { distNm: number; brg: number }) =>
   `${fmtNum(p.distNm, p.distNm < 10 ? 1 : 0)} nm / ${fmtNum(nmToKm(p.distNm))} km ${compass(p.brg)} (${String(Math.round(p.brg)).padStart(3, '0')}°)`;
 
@@ -84,20 +84,24 @@ export function TerrainSection({ plan }: { plan: FlightPlan }) {
           <div className="grid terrain-summary">
             <Panel title="Field elevation">
               <div className="field-value">{ft(data.fieldElevFt)}</div>
-              <div className="muted small">{fmtNum(data.fieldElevFt / 3.28084)} m · {data.icao}{data.runway ? ` runway ${data.runway}` : ''}</div>
+              <div className="muted small">{data.icao}{data.runway ? ` runway ${data.runway}` : ''}</div>
             </Panel>
-            <HighPanel title="Highest within 10 nm" p={s.within10} field={data.fieldElevFt} />
-            <HighPanel title={`Highest within ${RADIUS_NM} nm`} p={s.within25} field={data.fieldElevFt} />
+            <HighPanel title={`Highest within ${nmKm(10)}`} p={s.within10} field={data.fieldElevFt} />
+            <HighPanel title={`Highest within ${nmKm(RADIUS_NM)}`} p={s.within25} field={data.fieldElevFt} />
           </div>
 
+          <Panel title={`3D terrain around ${data.icao}`}>
+            <Terrain3D d={data} peaks={s.peaks.slice(0, 6)} />
+          </Panel>
+
           <div className="grid grid-2">
-            <Panel title={`Terrain around ${data.icao}`} right={<span className="muted small">{RADIUS_NM} nm / {fmtNum(nmToKm(RADIUS_NM))} km, north up</span>}>
+            <Panel title={`Terrain around ${data.icao}`} right={<span className="muted small">rings every {nmKm(5)}, north up</span>}>
               <TerrainRose d={data} peaks={s.peaks.slice(0, 6)} />
               <div className="terrain-legend">
                 {BANDS.map((b) => <span key={b.label}><i style={{ background: b.color }} />{b.label}</span>)}
               </div>
             </Panel>
-            <Panel title="Highest terrain by quadrant" right={<span className="muted small">within {RADIUS_NM} nm</span>}>
+            <Panel title="Highest terrain by quadrant" right={<span className="muted small">within {nmKm(RADIUS_NM)}</span>}>
               <table className="kv">
                 <tbody>
                   {s.quadrants.map((q) => (
@@ -110,7 +114,7 @@ export function TerrainSection({ plan }: { plan: FlightPlan }) {
               </table>
               <div className="muted small">
                 “+1,000 ft” is the highest sampled ground plus 1,000 ft, rounded up. It is <b>not</b> the chart MSA: no obstacles, and the ground is
-                only sampled every {BEARING_STEP}° and {RING_STEP_NM} nm. Use the MSA on your approach chart.
+                only sampled every {BEARING_STEP}° and {nmKm(RING_STEP_NM)}. Use the MSA on your approach chart.
               </div>
             </Panel>
           </div>
@@ -123,14 +127,14 @@ export function TerrainSection({ plan }: { plan: FlightPlan }) {
             )}>
               <ApproachProfile d={data} />
               <div className="muted small">
-                Ground along the extended centreline from {APPROACH_NM} nm out, against a 3° glide path from the field elevation. Approximate: the
+                Ground along the extended centreline from {nmKm(APPROACH_NM)} out, against a 3° glide path from the field elevation. Approximate: the
                 course comes from the runway number (magnetic, drawn as true) and starts at the airport reference point, not the threshold.
               </div>
             </Panel>
           )}
 
           <div className="grid grid-2">
-            <Panel title="Peaks above the field" right={<span className="muted small">within {RADIUS_NM} nm</span>}>
+            <Panel title="Peaks above the field" right={<span className="muted small">within {nmKm(RADIUS_NM)}</span>}>
               {s.peaks.length ? <FeatureTable rows={s.peaks.slice(0, 12)} showEle field={data.fieldElevFt} /> : <div className="muted small">{data.featuresError ? 'Not available right now (see below).' : 'None mapped in OpenStreetMap.'}</div>}
             </Panel>
             <Panel title="Passes, lakes and towns">
@@ -151,7 +155,7 @@ export function TerrainSection({ plan }: { plan: FlightPlan }) {
 
           <p className="note">
             For situational awareness in the sim, not for navigation. Ground heights: Copernicus DEM (90 m) via Open-Meteo, sampled every{' '}
-            {BEARING_STEP}° and {RING_STEP_NM} nm, so narrow peaks between samples can be missed; obstacles such as masts and buildings are not included.
+            {BEARING_STEP}° and {nmKm(RING_STEP_NM)}, so narrow peaks between samples can be missed; obstacles such as masts and buildings are not included.
             Peaks, passes, lakes and towns: © OpenStreetMap contributors (ODbL), heights as mapped. Looked up {new Date(data.fetchedAt).toUTCString().replace(' GMT', 'Z')} and kept
             in this browser for 30 days.
           </p>
@@ -166,7 +170,7 @@ function HighPanel({ title, p, field }: { title: string; p: TerrainPoint; field:
   return (
     <Panel title={title}>
       <div className="field-value">{ft(p.elevFt)} <small className={above > 2000 ? 'warn' : ''}>{above > 0 ? `+${fmtNum(above)} ft above field` : 'at or below field'}</small></div>
-      <div className="muted small">{fmtNum(p.elevFt / 3.28084)} m{p.distNm > 0 ? ` · ${where(p)}` : ''}{p.name ? ` · ${p.name}` : ''}</div>
+      <div className="muted small">{[p.distNm > 0 ? where(p) : '', p.name ?? ''].filter(Boolean).join(' · ') || 'At the field'}</div>
     </Panel>
   );
 }
@@ -180,7 +184,7 @@ function FeatureTable({ rows, showEle, field }: { rows: GeoFeature[]; showEle: b
             <td>{f.name}<br /><small>{where(f)}</small></td>
             <td>
               {showEle && f.eleM !== null ? (
-                <>{ftM(mToFt(f.eleM))}<br /><small>{mToFt(f.eleM) > field ? `+${fmtNum(mToFt(f.eleM) - field)} ft above field` : ''}</small></>
+                <>{ft(mToFt(f.eleM))}<br /><small>{mToFt(f.eleM) > field ? `+${fmtNum(mToFt(f.eleM) - field)} ft above field` : ''}</small></>
               ) : ''}
             </td>
           </tr>
@@ -264,7 +268,7 @@ function ApproachProfile({ d }: { d: TerrainData }) {
         </g>
       ))}
       {[0, 5, 10, 15].filter((nm) => nm <= n).map((nm) => (
-        <text key={nm} x={x(nm)} y={H - 8} textAnchor="middle" className="axis-label">{nm === 0 ? `${d.icao}` : `${nm} nm`}</text>
+        <text key={nm} x={x(nm)} y={H - 8} textAnchor="middle" className="axis-label">{nm === 0 ? `${d.icao}` : nmKm(nm)}</text>
       ))}
       <path d={ground} className="ground" />
       <line x1={x(n)} y1={y(gp(n))} x2={x(0)} y2={y(d.fieldElevFt)} className="glide-path" />

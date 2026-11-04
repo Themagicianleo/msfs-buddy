@@ -10,6 +10,12 @@ export function nmToKm(nm: number): number {
   return nm * KM_PER_NM;
 }
 
+/** "2.5 nm / 4.6 km": a distance in a label or note (keeps up to one decimal). */
+export function nmKm(nm: number): string {
+  const one = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? fmtNum(v) : fmtNum(v, 1));
+  return `${one(nm)} nm / ${one(nmToKm(nm))} km`;
+}
+
 /** "333 nm · 617 km" (both rounded to whole numbers). */
 export function fmtDistance(nm: number | null | undefined): string {
   if (nm === null || nm === undefined || !Number.isFinite(nm)) return '—';

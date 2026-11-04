@@ -15,7 +15,7 @@ subscription needed.
 
 | Page | What it shows |
 | --- | --- |
-| **Flight** | Departure/arrival with planned runways and flight category, block times, fuel, weights, route, and **terrain and geography** for the arrival, departure or alternate: field elevation, highest ground within 10 and 25 nm, a north-up terrain map coloured by height above the field, highest terrain + 1,000 ft per quadrant (not the chart MSA), the ground under the final approach against a 3° path, and nearby summits, passes, lakes and towns (Copernicus DEM via Open-Meteo; © OpenStreetMap contributors; cached 30 days; situational awareness only) |
+| **Flight** | Departure/arrival with planned runways and flight category, block times, fuel, weights, route, and **terrain and geography** for the arrival, departure or alternate: field elevation, highest ground within 10 and 25 nm, an interactive **3D terrain model** (rotate and zoom, runway, 3° approach path, labelled peaks; three.js, loaded only when shown), a north-up terrain map coloured by height above the field, highest terrain + 1,000 ft per quadrant (not the chart MSA), the ground under the final approach against a 3° path, and nearby summits, passes, lakes and towns (Copernicus DEM via Open-Meteo; © OpenStreetMap contributors; cached 30 days; situational awareness only) |
 | **OFP** | Full SimBrief OFP, the navlog table, and the ATC route / ICAO flight plan with copy buttons (handy for the MCDU) |
 | **Map** | Route on a dark map, with waypoints and the alternate |
 | **Weather** | Live METAR and TAF for DEP/ARR/ALTN plus any airport you add, decoded (wind, visibility, ceiling, QNH in hPa and inHg), flight category, headwind/crosswind for your runway. Refreshes every 5 minutes |

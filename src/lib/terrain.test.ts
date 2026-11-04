@@ -117,3 +117,23 @@ describe('loading and summarising', () => {
     expect(summarize(d).approach).toBeNull();
   });
 });
+
+describe('3D grid', () => {
+  it('lays out a square grid 1 nm apart, north row first, west to east', async () => {
+    const { squareGrid, loadTerrain3D, terrainColor } = await import('./terrain');
+    const { n, points } = squareGrid(FIELD);
+    expect(n).toBe(33);
+    expect(points).toHaveLength(33 * 33);
+    const mid = points[16 * 33 + 16];
+    expect(distanceNm(FIELD, mid)).toBeLessThan(0.01);
+    expect(Math.min(bearingDeg(FIELD, points[16]), 360 - bearingDeg(FIELD, points[16]))).toBeCloseTo(0, 0); // top row, middle: due north
+    expect(distanceNm(FIELD, points[16])).toBeCloseTo(16, 1);
+    expect(bearingDeg(FIELD, points[16 * 33 + 32])).toBeCloseTo(90, 0); // middle row, east end
+    const calls: string[] = [];
+    const g = await loadTerrain3D('ZUNZ', FIELD, fakeFetch(OSM, calls));
+    expect(calls).toHaveLength(11); // 1,089 points, 100 per request
+    expect(g.heightsFt[16 * 33 + 16]).toBe(Math.round(mToFt(FIELD_M)));
+    expect(terrainColor(0, 100)).toEqual([0.23, 0.53, 0.86]); // water
+    expect(terrainColor(20000, 9675)[0]).toBeGreaterThan(0.9); // snow
+  });
+});

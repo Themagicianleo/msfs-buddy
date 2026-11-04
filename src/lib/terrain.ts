@@ -316,3 +316,85 @@ export function cacheTerrain(d: TerrainData) {
     // storage full or unavailable: it's only a cache
   }
 }
+
+// ---------- Square grid for the 3D view ----------
+
+export const GRID3D_HALF_NM = 16;
+export const GRID3D_STEP_NM = 1;
+
+export interface Terrain3D {
+  v: 1;
+  icao: string;
+  fetchedAt: string;
+  center: LatLon;
+  halfNm: number;
+  /** Points per side; heights are row by row from north to south, west to east. */
+  n: number;
+  heightsFt: number[];
+}
+
+/** Grid points 1 nm apart in a square around the airport, north row first, west to east. */
+export function squareGrid(c: LatLon, halfNm = GRID3D_HALF_NM, stepNm = GRID3D_STEP_NM): { n: number; points: LatLon[] } {
+  const n = Math.round((2 * halfNm) / stepNm) + 1;
+  const points: LatLon[] = [];
+  for (let row = 0; row < n; row++) {
+    const north = halfNm - row * stepNm;
+    const lineCenter = destination(c, north >= 0 ? 0 : 180, Math.abs(north));
+    for (let col = 0; col < n; col++) {
+      const east = -halfNm + col * stepNm;
+      points.push(destination(lineCenter, east >= 0 ? 90 : 270, Math.abs(east)));
+    }
+  }
+  return { n, points };
+}
+
+export async function loadTerrain3D(icao: string, c: LatLon, fetchFn: typeof fetch = fetch, now = new Date()): Promise<Terrain3D> {
+  const { n, points } = squareGrid(c);
+  const m = await fetchElevations(points, fetchFn);
+  return { v: 1, icao, fetchedAt: now.toISOString(), center: c, halfNm: GRID3D_HALF_NM, n, heightsFt: m.map((x) => Math.round(mToFt(x))) };
+}
+
+const CACHE3D_PREFIX = 'msfs-buddy.terrain3d.';
+
+export function cachedTerrain3D(icao: string, now = Date.now()): Terrain3D | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(CACHE3D_PREFIX + icao) ?? 'null') as Terrain3D | null;
+    return d && d.v === 1 && now - Date.parse(d.fetchedAt) <= MAX_AGE_MS ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+export function cacheTerrain3D(d: Terrain3D) {
+  try {
+    localStorage.setItem(CACHE3D_PREFIX + d.icao, JSON.stringify(d));
+  } catch {
+    // only a cache
+  }
+}
+
+/** Ground colour by height above the field (same bands as the 2D map), water blue, snow above 8,000 ft. */
+export function terrainColor(heightFt: number, fieldFt: number): [number, number, number] {
+  if (heightFt <= 1) return [0.23, 0.53, 0.86]; // sea level: water
+  const above = heightFt - fieldFt;
+  const stops: [number, [number, number, number]][] = [
+    [-500, [0.16, 0.5, 0.3]],
+    [0, [0.19, 0.69, 0.35]],
+    [1000, [0.62, 0.83, 0.42]],
+    [2000, [1.0, 0.84, 0.04]],
+    [4000, [1.0, 0.62, 0.04]],
+    [7000, [0.85, 0.27, 0.2]],
+    [8000, [0.6, 0.45, 0.4]],
+    [9000, [0.96, 0.96, 0.98]],
+  ];
+  if (above <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i++) {
+    const [h1, c1] = stops[i];
+    const [h0, c0] = stops[i - 1];
+    if (above <= h1) {
+      const t = (above - h0) / (h1 - h0);
+      return [0, 1, 2].map((k) => c0[k] + (c1[k] - c0[k]) * t) as [number, number, number];
+    }
+  }
+  return stops[stops.length - 1][1];
+}

@@ -3,6 +3,7 @@
 // tune it. These are ESTIMATES for simulation, not certified performance.
 
 import { withVariant, type AircraftProfile } from './profiles';
+import { nmToKm } from '../../lib/format';
 import { convertWeight, type WeightUnit } from './units';
 
 export interface PlanInputs {
@@ -89,8 +90,8 @@ export function flightPhases(
   const to = toElevFt ? ` (${f0(cruiseAltFt)} − field ${f0(toElevFt)})` : '';
   formulas.push(
     `${label} climb time = ${f0(climbFt)} ft${from} ÷ ${f0(perf.climbRateFpm)} fpm = ${f1(climbMin)} min`,
-    `${label} climb distance = ${f1(climbMin)} min ÷ 60 × ${f0(perf.climbSpeedKt)} kt = ${f1(climbNm)} nm`,
-    `${label} descent distance = ${f1(descFt / 1000)} thousand ft${to} × ${perf.descentNmPer1000ft} nm per 1,000 ft = ${f1(descNm)} nm`,
+    `${label} climb distance = ${f1(climbMin)} min ÷ 60 × ${f0(perf.climbSpeedKt)} kt = ${f1(climbNm)} nm (${f0(nmToKm(climbNm))} km)`,
+    `${label} descent distance = ${f1(descFt / 1000)} thousand ft${to} × ${perf.descentNmPer1000ft} nm per 1,000 ft = ${f1(descNm)} nm (${f0(nmToKm(descNm))} km)`,
     `${label} descent time = ${f1(descNm)} nm ÷ ${f0(perf.descentSpeedKt)} kt × 60 = ${f1(descMin)} min`,
   );
 
@@ -109,7 +110,7 @@ export function flightPhases(
   const gs = Math.max(50, perf.cruiseTasKt + windKt);
   const cruiseMin = (cruiseNm / gs) * 60;
   formulas.push(
-    `${label} cruise distance = ${f1(distanceNm)} − ${f1(climbNm)} − ${f1(descNm)} = ${f1(cruiseNm)} nm`,
+    `${label} cruise distance = ${f1(distanceNm)} − ${f1(climbNm)} − ${f1(descNm)} = ${f1(cruiseNm)} nm (${f0(nmToKm(cruiseNm))} km)`,
     `${label} cruise ground speed = ${f0(perf.cruiseTasKt)} kt TAS ${windKt >= 0 ? '+' : '−'} ${f0(Math.abs(windKt))} kt wind = ${f0(gs)} kt`,
     `${label} cruise time = ${f1(cruiseNm)} nm ÷ ${f0(gs)} kt × 60 = ${f1(cruiseMin)} min`,
   );
