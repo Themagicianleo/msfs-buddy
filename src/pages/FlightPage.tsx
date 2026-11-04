@@ -1,6 +1,6 @@
 import type { LoadState } from '../App';
 import type { Page } from '../components/nav';
-import { CatBadge, CopyButton, Field, Panel } from '../components/ui';
+import { CatBadge, CopyButton, Field, Panel, WeightBar } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { RouteMap } from '../components/RouteMap';
 import { TerrainSection } from '../components/TerrainSection';
@@ -25,6 +25,74 @@ function AirportBlock({ a, time, timeLabel, end }: { a: Airport; time: number | 
       </div>
       <div className="apt-time">
         <span className="muted">{timeLabel}</span> {fmtZulu(time)}
+      </div>
+    </div>
+  );
+}
+
+function StatTile({ label, value, unit, sub, accent, warn }: { label: string; value: string; unit?: string; sub?: string; accent?: boolean; warn?: boolean }) {
+  return (
+    <div className={`stat-tile ${accent ? 'accent' : ''} ${warn ? 'warn' : ''}`}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}{unit && <small> {unit}</small>}</div>
+      {sub && <div className="stat-sub">{sub}</div>}
+    </div>
+  );
+}
+
+/** OUT → OFF → ON → IN, with taxi and airborne times between them. */
+function Timeline({ t }: { t: FlightPlan['times'] }) {
+  const span = (a: number | null, b: number | null) => (a && b ? fmtDuration(b - a) : null);
+  const points: [string, string, number | null][] = [
+    ['OUT', 'Off blocks', t.estOut],
+    ['OFF', 'Takeoff', t.estOff],
+    ['ON', 'Landing', t.estOn],
+    ['IN', 'On blocks', t.estIn],
+  ];
+  const legs = [
+    ['Taxi', span(t.estOut, t.estOff)],
+    ['Airborne', span(t.estOff, t.estOn) ?? fmtDuration(t.ete)],
+    ['Taxi', span(t.estOn, t.estIn)],
+  ];
+  return (
+    <div className="timeline">
+      {points.map(([code, label, time], i) => (
+        <div key={code} className="timeline-step">
+          <div className={`timeline-dot ${i === 1 || i === 2 ? 'air' : ''}`} />
+          <div className="timeline-code">{code}</div>
+          <div className="timeline-time">{fmtZulu(time)}</div>
+          <div className="timeline-label">{label}</div>
+          {i < 3 && <div className={`timeline-leg ${i === 1 ? 'air' : ''}`}><span>{legs[i][0]} {legs[i][1] ?? ''}</span></div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const FUEL_PARTS: [keyof FlightPlan['fuel'], string, string][] = [
+  ['trip', 'Trip', 'var(--blue)'],
+  ['contingency', 'Contingency', '#5ac8fa'],
+  ['alternate', 'Alternate', 'var(--orange)'],
+  ['reserve', 'Final reserve', 'var(--purple)'],
+  ['extra', 'Extra', 'var(--green)'],
+  ['taxi', 'Taxi', 'var(--faint)'],
+];
+
+/** How the block fuel is made up, as one stacked bar with a legend. */
+function FuelBar({ plan }: { plan: FlightPlan }) {
+  const parts = FUEL_PARTS.map(([k, label, color]) => ({ label, color, v: plan.fuel[k] ?? 0 })).filter((p) => p.v > 0);
+  const total = parts.reduce((a, p) => a + p.v, 0) || 1;
+  const u = plan.units.toUpperCase();
+  return (
+    <div className="fuel-bar">
+      <div className="fuel-track">
+        {parts.map((p) => <div key={p.label} style={{ width: `${(p.v / total) * 100}%`, background: p.color }} title={`${p.label} ${fmtNum(p.v)} ${u}`} />)}
+      </div>
+      <div className="fuel-legend">
+        {parts.map((p) => (
+          <div key={p.label}><i style={{ background: p.color }} />{p.label}<b>{fmtNum(p.v)}</b></div>
+        ))}
+        <div className="fuel-total">Block fuel<b>{fmtNum(plan.fuel.planRamp)} {u}</b></div>
       </div>
     </div>
   );
@@ -106,34 +174,39 @@ export function FlightPage({ plan, settings, theme, state, onRefresh, onDemo, on
       </div>
       </div>
 
-      <div className="grid grid-3">
-        <Panel title="Times (UTC)">
-          <div className="fields fields-2">
-            <Field label="Out (block)" value={fmtZulu(t.estOut)} />
-            <Field label="Off (takeoff)" value={fmtZulu(t.estOff)} />
-            <Field label="On (landing)" value={fmtZulu(t.estOn)} />
-            <Field label="In (block)" value={fmtZulu(t.estIn)} />
-            <Field label="Flight time" value={fmtDuration(t.ete)} accent />
-            <Field label="Block time" value={fmtDuration(t.block)} />
-          </div>
-        </Panel>
+      {/* The numbers checked first, as big glass tiles. */}
+      <div className="stat-tiles">
+        <StatTile label="Block fuel" value={fmtNum(plan.fuel.planRamp)} unit={u} sub={`Trip ${fmtNum(plan.fuel.trip)} ${u}`} accent />
+        <StatTile label="Flight time" value={fmtDuration(t.ete)} sub={`Block ${fmtDuration(t.block)}`} />
+        <StatTile label="Passengers" value={fmtNum(plan.weights.paxCount ?? plan.passengers)} sub={`Payload ${fmtNum(plan.weights.payload)} ${u}`} />
+        <StatTile
+          label="Takeoff weight"
+          value={fmtNum(plan.weights.tow)}
+          unit={u}
+          sub={plan.weights.tow !== null && plan.weights.maxTow ? `${Math.round((plan.weights.tow / plan.weights.maxTow) * 100)}% of max` : ''}
+          warn={plan.weights.tow !== null && plan.weights.maxTow !== null && plan.weights.tow > plan.weights.maxTow}
+        />
+      </div>
 
+      <Panel title="Times (UTC)">
+        <Timeline t={t} />
+      </Panel>
+
+      <div className="grid grid-2">
         <Panel title="Fuel" right={<button className="link" onClick={() => onGoto('loadsheet')}>Details ›</button>}>
-          <div className="fields fields-2">
-            <Field label="Block fuel" value={fmtNum(plan.fuel.planRamp)} unit={u} accent />
-            <Field label="Trip" value={fmtNum(plan.fuel.trip)} unit={u} />
+          <FuelBar plan={plan} />
+          <div className="fields fields-3">
             <Field label="Takeoff fuel" value={fmtNum(plan.fuel.planTakeoff)} unit={u} />
             <Field label="Landing fuel" value={fmtNum(plan.fuel.planLanding)} unit={u} />
             <Field label="Min T/O fuel" value={fmtNum(plan.fuel.minTakeoff)} unit={u} />
-            <Field label="Reserve" value={fmtNum(plan.fuel.reserve)} unit={u} />
           </div>
         </Panel>
 
         <Panel title="Weights" right={<button className="link" onClick={() => onGoto('loadsheet')}>Details ›</button>}>
-          <div className="fields fields-2">
-            <Field label="ZFW" value={fmtNum(plan.weights.zfw)} unit={u} accent />
-            <Field label="TOW" value={fmtNum(plan.weights.tow)} unit={u} />
-            <Field label="LW" value={fmtNum(plan.weights.ldw)} unit={u} />
+          <WeightBar label="Zero fuel weight" value={plan.weights.zfw} max={plan.weights.maxZfw} unit={u} />
+          <WeightBar label="Takeoff weight" value={plan.weights.tow} max={plan.weights.maxTow} unit={u} />
+          <WeightBar label="Landing weight" value={plan.weights.ldw} max={plan.weights.maxLdw} unit={u} />
+          <div className="fields fields-3">
             <Field label="Payload" value={fmtNum(plan.weights.payload)} unit={u} />
             <Field label="Passengers" value={fmtNum(plan.weights.paxCount ?? plan.passengers)} />
             <Field label="Cargo" value={fmtNum(plan.weights.cargo)} unit={u} />

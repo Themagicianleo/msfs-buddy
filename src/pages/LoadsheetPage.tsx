@@ -1,27 +1,7 @@
-import { Field, NoPlan, Panel } from '../components/ui';
+import { Field, NoPlan, Panel, WeightBar } from '../components/ui';
 import { fmtNum } from '../lib/format';
 import type { FlightPlan } from '../lib/simbrief';
 import type { Settings } from '../lib/storage';
-
-function WeightBar({ label, value, max, unit }: { label: string; value: number | null; max: number | null; unit: string }) {
-  const pct = value && max ? Math.min(100, (value / max) * 100) : 0;
-  const over = value !== null && max !== null && value > max;
-  return (
-    <div className="wbar">
-      <div className="wbar-top">
-        <span>{label}</span>
-        <span>
-          <b className={over ? 'warn' : ''}>{fmtNum(value)}</b>
-          <span className="muted"> / {fmtNum(max)} {unit}</span>
-        </span>
-      </div>
-      <div className="wbar-track">
-        <div className={`wbar-fill ${over ? 'over' : pct > 95 ? 'near' : ''}`} style={{ width: `${pct}%` }} />
-      </div>
-      <div className="muted small">{max && value !== null ? `${fmtNum(max - value)} ${unit} margin` : ''}</div>
-    </div>
-  );
-}
 
 export function LoadsheetPage({ plan }: { plan: FlightPlan | null; settings: Settings }) {
   if (!plan) return <NoPlan what="the loadsheet" />;

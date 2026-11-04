@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { fmtNum } from '../lib/format';
 import type { FlightCategory } from '../lib/metar';
 
 export function Panel({ title, right, children, className = '' }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
@@ -66,5 +67,26 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
     >
       {label}
     </button>
+  );
+}
+
+/** A weight against its limit, as a filled bar (orange near the limit, red over it). */
+export function WeightBar({ label, value, max, unit }: { label: string; value: number | null; max: number | null; unit: string }) {
+  const pct = value && max ? Math.min(100, (value / max) * 100) : 0;
+  const over = value !== null && max !== null && value > max;
+  return (
+    <div className="wbar">
+      <div className="wbar-top">
+        <span>{label}</span>
+        <span>
+          <b className={over ? 'warn' : ''}>{fmtNum(value)}</b>
+          <span className="muted"> / {fmtNum(max)} {unit}</span>
+        </span>
+      </div>
+      <div className="wbar-track">
+        <div className={`wbar-fill ${over ? 'over' : pct > 95 ? 'near' : ''}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="muted small">{max && value !== null ? `${fmtNum(max - value)} ${unit} margin` : ''}</div>
+    </div>
   );
 }
