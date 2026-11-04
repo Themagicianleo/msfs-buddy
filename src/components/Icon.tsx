@@ -107,12 +107,6 @@ const ICONS: Record<string, ReactNode> = {
     </>
   ),
   chevron: <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />,
-  terrain: (
-    <>
-      <path d="M2.5 19.5 9 8.5l4 6.5 2.5-3.5 6 8z" />
-      <path d="m7.4 11.2 1.6 1.3 1.6-1.3" />
-    </>
-  ),
   dispatch: (
     <>
       <path d="M20.5 3.5 3.5 10.6l6.8 2.6 2.6 6.8z" />

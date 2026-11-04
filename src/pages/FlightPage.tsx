@@ -3,6 +3,7 @@ import type { Page } from '../components/nav';
 import { CatBadge, CopyButton, Field, Panel } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { RouteMap } from '../components/RouteMap';
+import { TerrainSection } from '../components/TerrainSection';
 import { fmtAltitude, fmtDuration, fmtNum, fmtZulu, nmToKm } from '../lib/format';
 
 /** Unit text for a distance shown in nm: "nm · 617 km". */
@@ -162,10 +163,11 @@ export function FlightPage({ plan, settings, theme, state, onRefresh, onDemo, on
         </Panel>
       </div>
 
+      <TerrainSection plan={plan} />
+
       <div className="quick-row">
         <button className="btn" onClick={() => onGoto('weather')}>Weather</button>
         <button className="btn" onClick={() => onGoto('charts')}>Charts (ChartFox)</button>
-        <button className="btn" onClick={() => onGoto('terrain')}>Terrain at {plan.destination.icao}</button>
         <button className="btn" onClick={() => onGoto('ofp')}>Full OFP</button>
         {openAtcLink(settings.openAtcUrl, plan) ? (
           <a className="btn" href={openAtcLink(settings.openAtcUrl, plan)!} target="_blank" rel="noreferrer">Open in OpenATC</a>

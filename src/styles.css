@@ -293,6 +293,9 @@
 .approach-profile .glide-path { stroke: var(--blue); stroke-width: 2; stroke-dasharray: 6 4; }
 .approach-profile .grid-line { stroke: var(--line); }
 .approach-profile .axis-label { font-size: 11px; fill: var(--muted); }
+.terrain { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 70px; }
+.terrain-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.terrain-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-right: auto; }
 .terrain-summary { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
 @media (max-width: 600px) { .approach-profile .axis-label { font-size: 22px; } .terrain-rose .ring-label, .terrain-rose .peak-label { font-size: 11px; } }
 .terrain .kv small { color: var(--muted); font-weight: 400; }

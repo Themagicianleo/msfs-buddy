@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { NoPlan, Panel, Tabs } from '../components/ui';
+import { Panel, Tabs } from './ui';
 import { fmtNum, nmToKm } from '../lib/format';
 import type { Airport, FlightPlan } from '../lib/simbrief';
-import type { Settings } from '../lib/storage';
 import {
   APPROACH_NM, BEARING_STEP, RADIUS_NM, RING_STEP_NM, cacheTerrain, cachedTerrain, compass, glidePathFt, loadTerrain, mToFt, summarize,
   type GeoFeature, type TerrainData, type TerrainPoint,
@@ -26,13 +25,14 @@ const BANDS: { above: number; color: string; label: string }[] = [
 ];
 const bandColor = (aboveFt: number) => [...BANDS].reverse().find((b) => aboveFt > b.above)?.color ?? BANDS[0].color;
 
-export function TerrainPage({ plan }: { plan: FlightPlan | null; settings: Settings }) {
+/** Terrain and geography around the arrival (or departure / alternate), shown on the Flight page. */
+export function TerrainSection({ plan }: { plan: FlightPlan }) {
   const [which, setWhich] = useState<Which>('destination');
   const [data, setData] = useState<TerrainData | null>(null);
   const [status, setStatus] = useState<{ loading: boolean; error: string }>({ loading: false, error: '' });
   const [reload, setReload] = useState(0);
 
-  const apt: Airport | undefined = !plan ? undefined : which === 'origin' ? plan.origin : which === 'alternate' ? plan.alternates[0] : plan.destination;
+  const apt: Airport | undefined = which === 'origin' ? plan.origin : which === 'alternate' ? plan.alternates[0] : plan.destination;
   const key = apt ? `${apt.icao}/${apt.runway}/${apt.lat}/${apt.lon}` : '';
 
   useEffect(() => {
@@ -60,7 +60,6 @@ export function TerrainPage({ plan }: { plan: FlightPlan | null; settings: Setti
     // Reload only when the airport or runway changes, or on request.
   }, [key, reload]);
 
-  if (!plan) return <NoPlan what="terrain" />;
   const tabs: { id: Which; label: string }[] = [
     { id: 'destination', label: `Arrival ${plan.destination.icao}` },
     { id: 'origin', label: `Departure ${plan.origin.icao}` },
@@ -69,8 +68,9 @@ export function TerrainPage({ plan }: { plan: FlightPlan | null; settings: Setti
   const s = data && summarize(data);
 
   return (
-    <div className="page terrain">
-      <div className="page-toolbar">
+    <section className="terrain" id="terrain">
+      <div className="terrain-head">
+        <h2>Terrain and geography</h2>
         <Tabs tabs={tabs} value={which} onChange={setWhich} />
         <button className="btn btn-small" disabled={status.loading} onClick={() => setReload((n) => n + 1)}>{status.loading ? 'Loading…' : 'Reload'}</button>
       </div>
@@ -157,7 +157,7 @@ export function TerrainPage({ plan }: { plan: FlightPlan | null; settings: Setti
           </p>
         </>
       )}
-    </div>
+    </section>
   );
 }
 

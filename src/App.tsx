@@ -5,7 +5,6 @@ import { AppShell, ClockCapsule } from './shared/AppShell';
 import { FlightPage } from './pages/FlightPage';
 import { OfpPage } from './pages/OfpPage';
 import { MapPage } from './pages/MapPage';
-import { TerrainPage } from './pages/TerrainPage';
 import { WeatherPage } from './pages/WeatherPage';
 import { ChartsPage } from './pages/ChartsPage';
 import { PerfPage } from './pages/PerfPage';
@@ -22,7 +21,9 @@ import { applyTheme, useResolvedTheme } from './lib/theme';
 export type LoadState = { status: 'idle' | 'loading' | 'ok' | 'error'; message?: string; at?: Date };
 
 export default function App() {
-  const [page, setPage] = usePersistent<Page>('page', 'flight');
+  const [storedPage, setPage] = usePersistent<Page>('page', 'flight');
+  // A page saved by an older version may no longer exist (e.g. the old Terrain page).
+  const page: Page = storedPage in PAGE_TITLES ? storedPage : 'flight';
   const [stored, setSettings] = usePersistent<Settings>('settings', DEFAULT_SETTINGS);
   // Settings saved by older versions may lack newer keys.
   const settings = { ...DEFAULT_SETTINGS, ...stored };
@@ -101,7 +102,6 @@ export default function App() {
       )}
       {page === 'ofp' && <OfpPage {...common} />}
       {page === 'map' && <MapPage {...common} />}
-      {page === 'terrain' && <TerrainPage {...common} />}
       {page === 'weather' && <WeatherPage {...common} />}
       {page === 'charts' && <ChartsPage {...common} />}
       {page === 'perf' && <PerfPage {...common} />}
