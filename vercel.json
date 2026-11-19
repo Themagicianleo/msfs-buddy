@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "VITE_USE_PROXY=1 npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/proxy/simbrief/:path*", "destination": "https://www.simbrief.com/:path*" },
+    { "source": "/proxy/awc/:path*", "destination": "https://aviationweather.gov/:path*" },
+    { "source": "/proxy/vatsim/:path*", "destination": "https://metar.vatsim.net/:path*" }
+  ]
+}
