@@ -1,5 +1,5 @@
 // METAR/TAF from the NOAA Aviation Weather Center API (aviationweather.gov),
-// with VATSIM's METAR feed as a fallback (shared with the MSFS Buddy EFB).
+// with VATSIM's METAR feed as a fallback (shared with the Contrail EFB).
 // The last good reports are cached so a briefing still shows something
 // when you're offline, clearly marked with their age.
 

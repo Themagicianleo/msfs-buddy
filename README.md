@@ -1,4 +1,4 @@
-# MSFS Buddy — a mini EFB for Microsoft Flight Simulator
+# Contrail EFB — a mini EFB for Microsoft Flight Simulator
 
 A browser-based electronic flight bag, laid out like airliner tablet EFBs (such as
 the Fenix A320's) and styled like a native iPad app (Liquid Glass navigation and controls, light and dark mode), that pulls your latest flight plan from **SimBrief** and shows live
